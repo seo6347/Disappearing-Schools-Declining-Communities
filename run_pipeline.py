@@ -47,7 +47,6 @@ def main() -> None:
         print(f"\n[STAGE {stage}/5]", flush=True)
         if stage == 1:
             execute(root, "01_estimate_current_student_distribution.py", *base)
-            execute(root, "01-1_analyze_no_zone_sensitivity.py", *base)
         elif stage == 2:
             execute(root, "02-1_analyze_distance_graph_sensitivity.py", *base)
             execute(root, "02-2_build_adjacency_graph_and_triples.py", *base)
