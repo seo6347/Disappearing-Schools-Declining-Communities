@@ -18,7 +18,6 @@ NAVER Cloud Maps Directions 5로 실시간 최적 자동차 경로의 거리와 
 확정 기준
 ---------
 - 수용력 기준: CAP28에서 `capacity_feasible=True`인 안만 API 요청표에 포함
-- CAP19는 CAP28 가능 방향쌍의 부분집합인지 검증하며 별도 호출하지 않음
 - 방향 보존: A→B와 B→A는 일방통행·진입로·교통상황이 다를 수 있어 별도 요청
 - 경로 옵션: `traoptimal`(실시간 최적)
 - 요청 순서: 고정 난수 시드로 섞어 지역별 호출 시각 편향을 완화
@@ -28,9 +27,8 @@ NAVER Cloud Maps Directions 5로 실시간 최적 자동차 경로의 거리와 
 -----------
 1. 모든 후보안이 아니라 CAP28 수용 가능안만 사용한다.
 2. 후보안별 원시 구간을 `출발학교–도착학교` 기준으로 중복 제거한다.
-3. CAP19는 CAP28 부분집합이므로 재호출하지 않는다.
-4. 기존 결과 파일의 완료 상태는 재실행 시 건너뛴다.
-5. 429·5xx·네트워크 오류만 제한적으로 재시도한다.
+3. 기존 결과 파일의 완료 상태는 재실행 시 건너뛴다.
+4. 429·5xx·네트워크 오류만 제한적으로 재시도한다.
 
 NAVER API의 `goal`에 목적지를 여러 개 입력하면 각 목적지별 결과가 아니라
 비용이 가장 적은 목적지 하나의 경로만 반환된다. 따라서 본 분석에서는
@@ -39,7 +37,7 @@ NAVER API의 `goal`에 목적지를 여러 개 입력하면 각 목적지별 결
 입력 파일
 ---------
 data/02_processed/candidate_capacity_options.csv
-    - 03-1의 CAP28·CAP19 후보–존치학교별 수용력 평가 결과
+    - 03-1의 CAP28 후보–존치학교별 수용력 평가 결과
 
 data/02_processed/distance_graph_nodes.csv
     - 학교키, 학교명, 교육지원청, WGS84 위도·경도
@@ -224,7 +222,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--options-file", type=Path, default=None)
     parser.add_argument("--nodes-file", type=Path, default=None)
     parser.add_argument("--output-dir", type=Path, default=None)
-    parser.add_argument("--scenario", default=DEFAULT_SCENARIO)
+    parser.add_argument("--scenario", choices=[DEFAULT_SCENARIO], default=DEFAULT_SCENARIO)
     parser.add_argument(
         "--route-option",
         default=DEFAULT_ROUTE_OPTION,
@@ -354,6 +352,8 @@ def load_inputs(
     )
     require_columns(options, OPTIONS_REQUIRED, OPTIONS_FILE)
     require_columns(nodes, NODES_REQUIRED, NODES_FILE)
+    if options["capacity_scenario_id"].isna().any() or set(options["capacity_scenario_id"]) != {"CAP28"}:
+        raise ValueError("수용력안은 CAP28만 지원합니다.")
 
     for column in [
         "capacity_option_id",
@@ -560,31 +560,6 @@ def build_request_table(
         "deduplication_rate": 1 - len(requests_frame) / len(raw_legs),
     }
 
-    cap19 = options.loc[
-        options["capacity_scenario_id"].eq("CAP19") & options["capacity_feasible"]
-    ]
-    if not cap19.empty:
-        cap19_pairs = set(
-            explode_route_legs(cap19)[
-                ["origin_school_key", "destination_school_key"]
-            ].itertuples(index=False, name=None)
-        )
-        scenario_pairs = set(
-            requests_frame[
-                ["origin_school_key", "destination_school_key"]
-            ].itertuples(index=False, name=None)
-        )
-        extra_cap19 = cap19_pairs - scenario_pairs
-        if extra_cap19:
-            raise ValueError(
-                "CAP19 가능 방향쌍이 CAP28 요청표의 부분집합이 아닙니다: "
-                f"{list(extra_cap19)[:10]}"
-            )
-        metrics["cap19_unique_directed_routes"] = len(cap19_pairs)
-        metrics["cap19_subset_of_cap28"] = True
-    else:
-        metrics["cap19_unique_directed_routes"] = 0
-        metrics["cap19_subset_of_cap28"] = "NOT_AVAILABLE"
     return requests_frame, metrics
 
 
@@ -623,6 +598,14 @@ def merge_previous_results(
 
     preserved = previous.set_index("route_request_id")
     merged = planned.set_index("route_request_id")
+    for column in ["origin_school_key", "destination_school_key", "api_provider", "route_option"]:
+        if not preserved[column].astype("string").reindex(merged.index).equals(merged[column].astype("string")):
+            raise ValueError(f"기존 경로의 요청 입력이 다릅니다: {column}")
+    for column in ["origin_lon", "origin_lat", "destination_lon", "destination_lat"]:
+        old = pd.to_numeric(preserved[column], errors="raise").reindex(merged.index)
+        new = pd.to_numeric(merged[column], errors="raise")
+        if not old.eq(new).all() or not old.map(lambda x: f"{x:.8f}").equals(new.map(lambda x: f"{x:.8f}")):
+            raise ValueError(f"기존 경로의 요청 좌표가 다릅니다: {column}")
     result_columns = [
         column
         for column in RESULT_COLUMNS

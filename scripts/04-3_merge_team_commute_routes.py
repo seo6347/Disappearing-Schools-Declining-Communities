@@ -20,9 +20,10 @@
 - FERRY_ROUTE는 analysis_status=EXCLUDED_FERRY로 명시한다.
 - START_GOAL_SAME_ZERO는 유효한 0분 경로로 분석에 포함한다.
 - ROAD_TO_STRAIGHT_OVER_5는 analysis_eligible_flag=True를 유지한다.
-- 팀원 결과가 참조한 요청 파일의 바이트 해시가 현재 파일과 달라도, 모든 요청 ID와
-  배치가 완전하게 일치하고 팀원 결과끼리 동일한 원본 해시를 공유하면 전면 실패시키지
-  않고 BYTE_HASH_MISMATCH_LOGICAL_KEYS_MATCH로 기록한다.
+- 요청 파일의 바이트 해시가 달라지면 수집 당시 원본 요청표를 요구한다.
+  원본의 SHA-256을 수집 결과와 연결하고, 제거한 과거 부가 열을 제외한 모든 값을
+  비교한다. 좌표·ID·배치·경로 옵션 검증을 통과한 경우에만
+  VERIFIED_SOURCE_REQUESTS_MATCH로 기록한다.
 
 입력 파일
 - data/03_outputs/commute_route_requests.csv
@@ -49,6 +50,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+from decimal import Decimal
 from pathlib import Path
 
 import numpy as np
@@ -103,6 +105,11 @@ def parse_args() -> argparse.Namespace:
         "--result-files", type=Path, nargs="*", default=None,
         help="팀원 결과 CSV 경로를 직접 지정",
     )
+    parser.add_argument(
+        "--source-requests", type=Path, default=None,
+        help="Byte-identical collection input, required when the request file hash changes. "
+             "Default: data/01_raw/team_route_results/commute_route_requests_source.csv",
+    )
     return parser.parse_args()
 
 
@@ -116,6 +123,43 @@ def sha256_file(path: Path) -> str:
         for chunk in iter(lambda: file.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def validate_source_requests(
+    requests: pd.DataFrame, source_path: Path, source_hashes: list[str],
+) -> None:
+    """Prove that a schema change preserves the archived collection input."""
+    if not source_path.is_file() or source_hashes != [sha256_file(source_path)]:
+        raise ValueError("Collection source request file is missing or its SHA-256 does not match the results.")
+    source = read_csv_text(source_path)
+    require_columns(source, REQUIRED_REQUEST_COLUMNS, source_path.name)
+    for frame in (source, requests):
+        if frame["route_request_id"].isna().any() or frame["route_request_id"].duplicated().any():
+            raise ValueError("Source/current request IDs must be non-null and unique.")
+    # The only supported historical schema difference is this unused metadata flag.
+    source = source.drop(columns=["required_for_cap19_flag"], errors="ignore")
+    if set(source.columns) != set(requests.columns):
+        raise ValueError("Unexpected request schema change; collection input cannot be verified.")
+    source = source.set_index("route_request_id").sort_index()
+    current = requests.set_index("route_request_id").sort_index()
+    if not source.index.equals(current.index):
+        raise ValueError("Source/current request ID sets differ.")
+    # Compare every remaining field, including coordinates, batches, roles and weights.
+    # No coordinate tolerance: also preserve the collector's eight-decimal wire input.
+    coordinate_columns = {"origin_lon", "origin_lat", "destination_school_lon", "destination_school_lat"}
+    for column in source.columns:
+        old = source[column].fillna("")
+        new = current[column].fillna("")
+        if column in coordinate_columns:
+            old_num = pd.to_numeric(old, errors="raise")
+            new_num = pd.to_numeric(new, errors="raise")
+            equal = old.map(Decimal).equals(new.map(Decimal)) and old_num.map(lambda x: f"{x:.8f}").equals(
+                new_num.map(lambda x: f"{x:.8f}")
+            )
+        else:
+            equal = old.equals(new)
+        if not equal:
+            raise ValueError(f"Collection input changed: {column}")
 
 
 def find_request_file(project_root: Path) -> Path:
@@ -199,6 +243,7 @@ def main() -> None:
         raise ValueError("기준 요청 파일의 route_request_id가 중복되어 있습니다.")
 
     request_hash = sha256_file(request_path)
+    collection_requests = requests.copy()
     request_result_placeholders = [
         "routing_provider", "routing_status", "road_distance_m",
         "road_duration_min", "routing_error",
@@ -256,6 +301,18 @@ def main() -> None:
     })
     source_hash_consistent = len(source_hashes) == 1
     source_hash_exact_match = source_hashes == [request_hash]
+    if raw["source_request_file_sha256"].isna().any():
+        raise ValueError("Collected results contain missing source request hashes.")
+    if raw["route_option"].isna().any() or set(raw["route_option"]) != {"traoptimal"}:
+        raise ValueError("Archived commute routes must use traoptimal.")
+    source_input_verified = False
+    if not source_hash_exact_match:
+        source_path = (
+            args.source_requests.resolve() if args.source_requests is not None
+            else project_root / "data/01_raw/team_route_results/commute_route_requests_source.csv"
+        )
+        validate_source_requests(collection_requests, source_path, source_hashes)
+        source_input_verified = True
     unexpected = raw[~raw["result_route_id_in_request_flag"]].copy()
     valid_raw = raw[raw["result_route_id_in_request_flag"]].copy()
 
@@ -453,10 +510,10 @@ def main() -> None:
         and len(unexpected) == 0
         and merged["result_batch_match_flag"].fillna(False).all()
     )
-    if source_hash_exact_match:
+    if source_hash_exact_match and logical_key_complete:
         source_hash_validation = "EXACT_MATCH"
-    elif source_hash_consistent and logical_key_complete:
-        source_hash_validation = "BYTE_HASH_MISMATCH_LOGICAL_KEYS_MATCH"
+    elif source_hash_consistent and logical_key_complete and source_input_verified:
+        source_hash_validation = "VERIFIED_SOURCE_REQUESTS_MATCH"
     else:
         source_hash_validation = "SOURCE_HASH_VALIDATION_FAILED"
     merged["source_hash_validation"] = source_hash_validation
@@ -559,7 +616,7 @@ def main() -> None:
     add_summary(
         "INPUT", "ALL", "source_hash_validation", source_hash_validation, "status",
         "PASS" if not source_hash_fail else "FAIL",
-        "바이트 해시 불일치 시 전체 요청 ID·배치 완전 일치 여부로 논리 검증",
+        "해시 변경 시 수집 원본 SHA-256·전체 요청 입력·배치 검증",
     )
     add_summary("INPUT", "ALL", "required_route_count", len(requests), "routes", "PASS", "기준 모집단")
     add_summary("INPUT", "ALL", "result_file_count", len(result_paths), "files", "PASS", unique_join(pd.Series([p.name for p in result_paths])))

@@ -221,6 +221,10 @@ def load_inputs(
     )
     require_columns(options, OPTIONS_REQUIRED, INPUT_OPTIONS)
     require_columns(sensitivity, SENSITIVITY_REQUIRED, INPUT_SENSITIVITY)
+    if options["capacity_scenario_id"].isna().any() or set(options["capacity_scenario_id"]) != {"CAP28"}:
+        raise ValueError("CAP28 자료만 지원합니다.")
+    if sensitivity["capacity_scenario_id"].isna().any() or set(sensitivity["capacity_scenario_id"]) != {"CAP28"}:
+        raise ValueError("CAP28 민감도 자료만 지원합니다.")
 
     for column in id_dtypes:
         options[column] = normalize_id(options[column])

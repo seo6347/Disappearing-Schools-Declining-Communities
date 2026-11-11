@@ -37,7 +37,7 @@
 입력 파일
 ---------
 data/02_processed/candidate_capacity_options.csv
-    - 03-1의 CAP28·CAP19 후보–존치학교별 수용력 평가 결과
+    - 03-1의 CAP28 후보–존치학교별 수용력 평가 결과
 
 data/02_processed/school_road_routes.csv
     - 03-2의 학교 간 방향별 NAVER Directions 5 경로 결과
@@ -49,7 +49,7 @@ data/02_processed/candidate_road_access_options.csv
     - 페리·30분 초과·구조적 우회·극단시간 사례도 삭제하지 않고 보존
 
 data/02_processed/road_access_sensitivity_summary.csv
-    - CAP28·CAP19별 페리 제외 후 여러 시간·구조적 우회 기준을 적용했을 때
+    - CAP28별 페리 제외 후 여러 시간·구조적 우회 기준을 적용했을 때
       남는 존치학교안 수와 한 곳 이상 가능한 3개교 후보 수
 
 실행 방법
@@ -334,6 +334,8 @@ def load_inputs(
     )
     require_columns(capacity, CAPACITY_REQUIRED, CAPACITY_OPTIONS_FILE)
     require_columns(routes, ROUTES_REQUIRED, ROUTES_FILE)
+    if capacity["capacity_scenario_id"].isna().any() or set(capacity["capacity_scenario_id"]) != {"CAP28"}:
+        raise ValueError("CAP28 자료만 지원합니다.")
 
     for column in [
         "capacity_option_id",

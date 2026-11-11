@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 from pathlib import Path
 import shutil
 import subprocess
@@ -30,6 +31,8 @@ def main() -> None:
                         help="Data/output root; defaults to the folder containing this runner.")
     parser.add_argument("--overwrite", action="store_true", help="Replace Step 06/07 generated outputs.")
     parser.add_argument("--font", type=Path, help="Optional Korean font file for Step 06/07 plots.")
+    parser.add_argument("--source-requests", type=Path,
+                        help="Original collection request CSV whose SHA-256 is recorded in archived commute results.")
     args = parser.parse_args()
     root = args.project_root.expanduser().resolve()
     raw = root / "data" / "01_raw"
@@ -51,8 +54,8 @@ def main() -> None:
             execute(root, "02-1_analyze_distance_graph_sensitivity.py", *base)
             execute(root, "02-2_build_adjacency_graph_and_triples.py", *base)
         elif stage == 3:
-            # Retain the original early CAP28/CAP19 comparison. Downstream uses CAP28.
-            execute(root, "03-1_evaluate_capacity_scenarios.py", *base, "--students-per-class", "28", "19")
+            # Evaluate the supported CAP28 capacity assumption.
+            execute(root, "03-1_evaluate_capacity_scenarios.py", *base, "--students-per-class", "28")
             processed = root / "data" / "02_processed"
             processed.mkdir(parents=True, exist_ok=True)
             # Use the completed historical API results; never request new routes here.
@@ -67,12 +70,35 @@ def main() -> None:
                              "03-5_select_nonoverlapping_clusters.py"]:
                 execute(root, filename, *base)
         elif stage == 4:
+            source_requests = (
+                args.source_requests.expanduser().resolve() if args.source_requests
+                else raw / "team_route_results" / "commute_route_requests_source.csv"
+            )
+            if not source_requests.is_file() and not args.source_requests:
+                source_requests = root / "data/02_processed/commute_route_requests_source.csv"
+                if not source_requests.is_file():
+                    # Preserve an existing, authenticated collection input before 04-1 replaces it.
+                    previous_requests = root / "data/03_outputs/commute_route_requests.csv"
+                    if previous_requests.is_file():
+                        import pandas as pd
+                        source_hash = hashlib.sha256(previous_requests.read_bytes()).hexdigest()
+                        for batch in required[-2:]:
+                            hashes = pd.read_csv(raw / batch, usecols=["source_request_file_sha256"])
+                            if not hashes["source_request_file_sha256"].eq(source_hash).all():
+                                raise ValueError("Existing request file does not match the archived collection source hash.")
+                        source_requests.parent.mkdir(parents=True, exist_ok=True)
+                        shutil.copy2(previous_requests, source_requests)
+            if not source_requests.is_file():
+                raise FileNotFoundError("Preserve the original collection input and provide --source-requests before Stage 4.")
+            if source_requests.resolve() == (root / "data/03_outputs/commute_route_requests.csv").resolve():
+                raise ValueError("--source-requests must be a preserved copy outside the generated request output path.")
             # Batch count must match the two historical collection files.
             execute(root, "04-1_prepare_commute_route_requests.py", *base, "--scenarios", "CAP28", "--batch-count", "2")
             # 04-2 is deliberately not run: 04-3 reads archived team API results.
             for filename in ["04-3_merge_team_commute_routes.py", "04-4_calculate_commute_time_changes.py",
                              "04-5_select_commute_bounds.py"]:
-                execute(root, filename, *base)
+                options = ["--source-requests", str(source_requests)] if filename.startswith("04-3") else []
+                execute(root, filename, *base, *options)
         else:
             execute(root, "05_analyze_school_voids.py", *base)
             opts = ["--analysis-root", str(root), "--input", str(root / "data/03_outputs/commute_bound_demand_results.csv")]

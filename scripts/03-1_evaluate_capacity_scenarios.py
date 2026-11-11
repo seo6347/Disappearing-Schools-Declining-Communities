@@ -20,14 +20,6 @@
 - 수용 가능: 학교 수용력 >= 통합 수요
 - 소수점 반올림·올림 없이 원자료의 학생 수와 교실 수를 그대로 계산
 
-엄격한 수용력 시나리오
-----------------------
-28명보다 낮은 구체적 값은 아직 확정하지 않았으므로 기본 실행은 28명만
-계산한다. 팀에서 값을 확정하면 동일 코드에 다음처럼 추가한다.
-
-    py scripts/03-1_evaluate_capacity_scenarios.py \
-        --students-per-class 28 24 20
-
 입력 파일
 ---------
 data/02_processed/distance_graph_nodes.csv
@@ -145,6 +137,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--students-per-class",
         type=int,
+        choices=[28],
         nargs="+",
         default=DEFAULT_STUDENTS_PER_CLASS,
         help="평가할 교실당 학생 수. 기본값: 28",
@@ -163,12 +156,9 @@ def normalize_id(series: pd.Series) -> pd.Series:
 
 
 def validate_students_per_class(values: list[int]) -> list[int]:
-    if not values:
-        raise ValueError("교실당 학생 수를 하나 이상 입력해야 합니다.")
-    if any(isinstance(value, bool) or value <= 0 for value in values):
-        raise ValueError("교실당 학생 수는 0보다 큰 정수여야 합니다.")
-    # 큰 기준을 먼저 출력해 28명 기준을 가장 앞에서 확인할 수 있게 한다.
-    return sorted(set(int(value) for value in values), reverse=True)
+    if values != [28]:
+        raise ValueError("지원하는 교실당 학생 수는 28명뿐입니다.")
+    return [28]
 
 
 def resolve_paths(args: argparse.Namespace) -> tuple[Path, Path, Path]:

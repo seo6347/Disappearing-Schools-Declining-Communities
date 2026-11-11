@@ -6,8 +6,15 @@
 ----
 03-4에서 수용력과 최종 도로 접근성 기준을 통과한 3개교 후보 중에서,
 같은 학교가 둘 이상의 군집에 중복되지 않도록 CAP28 기준 군집을 선정한다.
-선정된 동일 군집이 CAP19에서도 유지 가능한지 재평가하여 단계 03의
+CAP28 적격 존치학교안을 추출하여 단계 03의
 '통합 가능한 최종 기준 군집'을 확정한다.
+
+이 단계에서 확정하는 범위
+--------------------------
+이 단계에서는 3개교 군집만 확정하며, 군집 안의 최종 존치학교 하나를
+선택하지 않는다. 선정 군집의 적격 CAP28 존치학교안들을 모두 단계 04로
+전달한다. 단계 04에서 학생 가중 통학시간 변화를 기준으로 하한·상한을
+선택한다.
 
 왜 최적화가 필요한가
 ---------------------
@@ -35,22 +42,6 @@
 3순위: 1·2순위도 같으면 후보 ID 순위합 최소화
     - 실행할 때마다 같은 결과가 나오도록 결정론적 동률 처리를 한다.
 
-CAP28·CAP19 비교 원칙
----------------------
-- 기준 비중복 군집은 CAP28에서 한 번만 선정한다.
-- CAP19에서는 같은 candidate_id가 수용력·도로 기준을 통과하는지만 재평가한다.
-- CAP19에서 불가능해진 군집을 다른 군집으로 교체하여 재최적화하지 않는다.
-- 따라서 두 시나리오 차이는 학교 조합 변경이 아니라 수용력 가정의 차이로
-  해석할 수 있다.
-
-중요한 해석 원칙
-----------------
-- 03-5에서는 최종 3개교 묶음만 확정한다.
-- 존치학교는 아직 하나로 선택하지 않는다.
-- 선정 군집에 남아 있는 모든 적격 존치학교안을 단계 04로 넘긴다.
-- 단계 04에서 집계구별 통합 전후 통학시간을 계산한 뒤, 군집별 부담이
-  최소인 존치안과 최대인 존치안을 각각 하한·상한으로 확정한다.
-
 입력 파일
 ---------
 data/02_processed/final_road_candidate_summary.csv
@@ -63,14 +54,14 @@ data/02_processed/final_road_access_options.csv
 ---------
 data/02_processed/nonoverlap_cluster_selection.csv
     - CAP28 최종 가능 후보 전체를 보존한 선택 결과
-    - 선택 여부, 최종 군집 ID, 겹치는 선택 군집, CAP19 유지 여부 포함
+    - 선택 여부, 최종 군집 ID, 겹치는 선택 군집 포함
 
 data/02_processed/final_selected_cluster_options.csv
-    - 최종 선택 군집에 속한 CAP28·CAP19 적격 존치학교안만 추출
+    - 최종 선택 군집에 속한 CAP28 적격 존치학교안만 추출
     - 단계 04의 집계구→현재학교·존치학교 경로 요청 구성에 사용
 
 data/02_processed/nonoverlap_selection_summary.csv
-    - 교육지원청별 후보·학교·선택 군집·포함 학교·CAP19 유지 군집 수
+    - 교육지원청별 후보·학교·선택 군집·포함 학교
     - 각 교육지원청의 최적화 성공 여부와 전국 합계 포함
 
 실행 방법
@@ -126,7 +117,6 @@ OUTPUT_OPTIONS = "final_selected_cluster_options.csv"
 OUTPUT_SUMMARY = "nonoverlap_selection_summary.csv"
 
 BASE_SCENARIO = "CAP28"
-STRICT_SCENARIO = "CAP19"
 NUMERIC_TOLERANCE = 1e-7
 
 CANDIDATE_REQUIRED = {
@@ -319,9 +309,14 @@ def validate_inputs(
         raise ValueError("final_rule_check가 PASS가 아닌 존치안이 있습니다.")
 
     scenario_set = set(candidate_result["capacity_scenario_id"].dropna())
-    if not {BASE_SCENARIO, STRICT_SCENARIO}.issubset(scenario_set):
+    if (
+        scenario_set != {BASE_SCENARIO}
+        or candidate_result["capacity_scenario_id"].isna().any()
+        or option_result["capacity_scenario_id"].isna().any()
+        or set(option_result["capacity_scenario_id"]) != {BASE_SCENARIO}
+    ):
         raise ValueError(
-            f"{BASE_SCENARIO}과 {STRICT_SCENARIO} 후보가 모두 필요합니다: {scenario_set}"
+            f"{BASE_SCENARIO} 후보·존치안만 지원합니다: {scenario_set}"
         )
 
     for column in ["final_eligible_option_count", "min_eligible_max_road_duration_min"]:
@@ -358,21 +353,6 @@ def validate_inputs(
         & (base["school_2_key"] < base["school_3_key"])
     ).all():
         raise ValueError("후보 학교 키의 오름차순 정렬 규칙이 깨졌습니다.")
-
-    strict_ids = set(
-        candidate_result.loc[
-            candidate_result["capacity_scenario_id"].eq(STRICT_SCENARIO),
-            "candidate_id",
-        ]
-    )
-    base_ids = set(
-        candidate_result.loc[
-            candidate_result["capacity_scenario_id"].eq(BASE_SCENARIO),
-            "candidate_id",
-        ]
-    )
-    if not strict_ids.issubset(base_ids):
-        raise ValueError("CAP19 후보 집합이 CAP28 후보 집합의 부분집합이 아닙니다.")
 
     eligible_options = option_result.loc[option_result["final_road_eligible"]]
     detail_counts = eligible_options.groupby(
@@ -656,77 +636,6 @@ def attach_cluster_ids_and_conflicts(selection: pd.DataFrame) -> pd.DataFrame:
     return result
 
 
-def attach_cap19_reevaluation(
-    selection: pd.DataFrame,
-    candidates: pd.DataFrame,
-) -> pd.DataFrame:
-    result = selection.copy()
-    strict = candidates.loc[
-        candidates["capacity_scenario_id"].eq(STRICT_SCENARIO),
-        [
-            "candidate_id",
-            "candidate_road_eligible",
-            "candidate_road_status",
-            "final_eligible_option_count",
-            "eligible_retained_school_keys",
-            "eligible_retained_school_names",
-            "candidate_exclusion_reason",
-        ],
-    ].copy()
-    strict = strict.rename(
-        columns={
-            "candidate_road_eligible": "cap19_candidate_road_eligible",
-            "candidate_road_status": "cap19_candidate_road_status",
-            "final_eligible_option_count": "cap19_final_eligible_option_count",
-            "eligible_retained_school_keys": "cap19_eligible_retained_school_keys",
-            "eligible_retained_school_names": "cap19_eligible_retained_school_names",
-            "candidate_exclusion_reason": "cap19_candidate_exclusion_reason",
-        }
-    )
-    result = result.merge(
-        strict,
-        on="candidate_id",
-        how="left",
-        validate="one_to_one",
-    )
-    result["cap19_candidate_exists"] = result[
-        "cap19_candidate_road_status"
-    ].notna()
-    # NaN은 CAP19 후보 자체가 없다는 뜻이다. eq(True)는 NaN을 False로
-    # 처리하면서 object dtype 자동 다운캐스팅 경고도 만들지 않는다.
-    result["cap19_candidate_road_eligible"] = result[
-        "cap19_candidate_road_eligible"
-    ].eq(True)
-    result["cap19_final_eligible_option_count"] = result[
-        "cap19_final_eligible_option_count"
-    ].fillna(0).astype(int)
-    for column in [
-        "cap19_candidate_road_status",
-        "cap19_eligible_retained_school_keys",
-        "cap19_eligible_retained_school_names",
-        "cap19_candidate_exclusion_reason",
-    ]:
-        result[column] = result[column].fillna("NONE")
-
-    result["cap19_cluster_status"] = np.select(
-        [
-            result["cap19_candidate_road_eligible"],
-            ~result["cap19_candidate_exists"],
-            result["cap19_candidate_exists"]
-            & ~result["cap19_candidate_road_eligible"],
-        ],
-        [
-            "MAINTAINED_CAP19",
-            "NOT_CAPACITY_FEASIBLE_CAP19",
-            "NO_ROAD_FEASIBLE_OPTION_CAP19",
-        ],
-        default="CHECK_REQUIRED",
-    )
-    if result["cap19_cluster_status"].eq("CHECK_REQUIRED").any():
-        raise AssertionError("CAP19 재평가 상태를 결정하지 못한 후보가 있습니다.")
-    return result
-
-
 def build_selected_options(
     selection: pd.DataFrame,
     options: pd.DataFrame,
@@ -738,14 +647,13 @@ def build_selected_options(
             "final_cluster_id",
             "min_eligible_max_road_duration_min",
             "candidate_compactness_seconds",
-            "cap19_cluster_status",
         ],
     ].copy()
     selected_ids = set(selected["candidate_id"])
     result = options.loc[
         options["candidate_id"].isin(selected_ids)
         & options["final_road_eligible"]
-        & options["capacity_scenario_id"].isin([BASE_SCENARIO, STRICT_SCENARIO])
+        & options["capacity_scenario_id"].eq(BASE_SCENARIO)
     ].copy()
     result = result.merge(
         selected,
@@ -753,18 +661,13 @@ def build_selected_options(
         how="left",
         validate="many_to_one",
     )
-    result["scenario_role"] = np.where(
-        result["capacity_scenario_id"].eq(BASE_SCENARIO),
-        "BASELINE_CAP28",
-        "STRICT_CAP19_REEVALUATION",
-    )
+    result["scenario_role"] = "BASELINE_CAP28"
 
     front_columns = [
         "final_cluster_id",
         "candidate_id",
         "capacity_scenario_id",
         "scenario_role",
-        "cap19_cluster_status",
         "min_eligible_max_road_duration_min",
         "candidate_compactness_seconds",
     ]
@@ -788,48 +691,8 @@ def build_selected_options(
 
 def finalize_summary(
     summary: pd.DataFrame,
-    selection: pd.DataFrame,
 ) -> pd.DataFrame:
     result = summary.copy()
-    selected = selection.loc[selection["selected_cluster_flag"]]
-    strict_counts = selected.groupby("school_edu_office").agg(
-        cap19_maintained_cluster_count=(
-            "cap19_cluster_status",
-            lambda values: int((values == "MAINTAINED_CAP19").sum()),
-        ),
-        cap19_not_capacity_feasible_cluster_count=(
-            "cap19_cluster_status",
-            lambda values: int((values == "NOT_CAPACITY_FEASIBLE_CAP19").sum()),
-        ),
-        cap19_no_road_feasible_cluster_count=(
-            "cap19_cluster_status",
-            lambda values: int((values == "NO_ROAD_FEASIBLE_OPTION_CAP19").sum()),
-        ),
-    ).reset_index()
-    result = result.merge(
-        strict_counts,
-        on="school_edu_office",
-        how="left",
-        validate="one_to_one",
-    )
-    for column in [
-        "cap19_maintained_cluster_count",
-        "cap19_not_capacity_feasible_cluster_count",
-        "cap19_no_road_feasible_cluster_count",
-    ]:
-        result[column] = result[column].fillna(0).astype(int)
-    result["cap19_maintenance_rate"] = (
-        result["cap19_maintained_cluster_count"] / result["selected_cluster_count"]
-    )
-    result["optimization_check"] = np.where(
-        result["selected_cluster_count"]
-        == result["cap19_maintained_cluster_count"]
-        + result["cap19_not_capacity_feasible_cluster_count"]
-        + result["cap19_no_road_feasible_cluster_count"],
-        result["optimization_check"],
-        "FAIL",
-    )
-
     total = {
         "school_edu_office": "ALL",
         "cap28_eligible_candidate_count": int(
@@ -860,19 +723,6 @@ def finalize_summary(
         ].sum(),
         "optimization_check": (
             "PASS" if result["optimization_check"].eq("PASS").all() else "FAIL"
-        ),
-        "cap19_maintained_cluster_count": int(
-            result["cap19_maintained_cluster_count"].sum()
-        ),
-        "cap19_not_capacity_feasible_cluster_count": int(
-            result["cap19_not_capacity_feasible_cluster_count"].sum()
-        ),
-        "cap19_no_road_feasible_cluster_count": int(
-            result["cap19_no_road_feasible_cluster_count"].sum()
-        ),
-        "cap19_maintenance_rate": (
-            result["cap19_maintained_cluster_count"].sum()
-            / result["selected_cluster_count"].sum()
         ),
     }
     result = pd.concat([result, pd.DataFrame([total])], ignore_index=True)
@@ -910,21 +760,6 @@ def validate_final_outputs(
     if cap28_option_candidates != selected_id_set:
         raise AssertionError("모든 선택 군집에 CAP28 적격 존치안이 존재하지 않습니다.")
 
-    maintained_ids = set(
-        selected.loc[
-            selected["cap19_cluster_status"].eq("MAINTAINED_CAP19"),
-            "candidate_id",
-        ]
-    )
-    cap19_option_candidates = set(
-        selected_options.loc[
-            selected_options["capacity_scenario_id"].eq(STRICT_SCENARIO),
-            "candidate_id",
-        ]
-    )
-    if cap19_option_candidates != maintained_ids:
-        raise AssertionError("CAP19 유지 군집과 CAP19 적격 존치안 집합이 다릅니다.")
-
     total_summary = summary.loc[summary["school_edu_office"].eq("ALL")].iloc[0]
     if int(total_summary["selected_cluster_count"]) != len(selected):
         raise AssertionError("전국 요약의 선택 군집 수가 상세 선택 결과와 다릅니다.")
@@ -953,13 +788,6 @@ def order_selection_columns(selection: pd.DataFrame) -> pd.DataFrame:
         "candidate_compactness_seconds",
         "conflicting_selected_cluster_ids",
         "conflicting_selected_school_keys",
-        "cap19_cluster_status",
-        "cap19_candidate_exists",
-        "cap19_candidate_road_eligible",
-        "cap19_final_eligible_option_count",
-        "cap19_eligible_retained_school_keys",
-        "cap19_eligible_retained_school_names",
-        "cap19_candidate_exclusion_reason",
     ]
     remaining = [column for column in selection.columns if column not in front_columns]
     return selection[front_columns + remaining].sort_values(
@@ -982,17 +810,8 @@ def log_results(
         "후보 참여 학교 포괄률: %.2f%%",
         float(total["school_coverage_rate"]) * 100,
     )
-    logging.info(
-        "CAP19 유지 군집: %s / CAP19 미유지 군집: %s",
-        f"{int(total['cap19_maintained_cluster_count']):,}",
-        f"{int(total['selected_cluster_count'] - total['cap19_maintained_cluster_count']):,}",
-    )
-    logging.info(
-        "단계 04용 적격 존치안: 전체 %s / CAP28 %s / CAP19 %s",
-        f"{len(selected_options):,}",
-        f"{int(selected_options['capacity_scenario_id'].eq(BASE_SCENARIO).sum()):,}",
-        f"{int(selected_options['capacity_scenario_id'].eq(STRICT_SCENARIO).sum()):,}",
-    )
+    logging.info("단계 04용 CAP28 적격 존치안: %s", f"{len(selected_options):,}")
+
 
 
 def main() -> int:
@@ -1012,9 +831,8 @@ def main() -> int:
         args.solver_time_limit_seconds,
     )
     selection = attach_cluster_ids_and_conflicts(selection)
-    selection = attach_cap19_reevaluation(selection, candidates)
     selected_options = build_selected_options(selection, options)
-    optimization_summary = finalize_summary(optimization_summary, selection)
+    optimization_summary = finalize_summary(optimization_summary)
     validate_final_outputs(selection, selected_options, optimization_summary)
     selection = order_selection_columns(selection)
 

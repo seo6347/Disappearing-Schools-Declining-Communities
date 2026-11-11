@@ -183,6 +183,8 @@ def main() -> None:
     ]
     require_columns(matrix, matrix_required, MATRIX_FILE)
     require_columns(routes, route_required, ROUTE_FILE)
+    if matrix["capacity_scenario_id"].isna().any() or set(matrix["capacity_scenario_id"]) != {"CAP28"}:
+        raise ValueError("CAP28 자료만 지원합니다.")
 
     if matrix.empty or routes.empty:
         raise ValueError("입력 파일이 비어 있습니다.")

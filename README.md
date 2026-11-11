@@ -15,7 +15,7 @@ SBS 데이터사이언스&저널리즘 아카데미 5기 최종 프로젝트에�
 >
 > 현재 저장소에는 지금까지 수행한 분석의 코드와 실행 방법을 공개했습니다. 제공된 입력 자료와 기존 API 경로 데이터를 사용해 해당 분석을 다시 실행할 수 있습니다. 아래 결과는 현재 공개 버전의 가정과 분석 범위에 해당하며, 후속 작업에 따라 보완되거나 변경될 수 있습니다.
 
-[분석 데이터 다운로드](https://drive.google.com/file/d/1HgFXBW5J9d3-zDmiuqZ7gLOriOFdx4Df/view?usp=sharing) · [분석 코드 살펴보기](scripts/) · [분석 과정 이해하기(pdf)](https://drive.google.com/file/d/13MMnzTGuf2LiSH80avUr3SUQ0RSbcw_V/view?usp=sharing)
+[분석 데이터 다운로드](https://drive.google.com/file/d/1gI2mbYeZBlatgF54blwLDYTPECRAkfMG/view?usp=sharing) · [분석 코드 살펴보기](scripts/) · [분석 과정 이해하기(pdf)](https://drive.google.com/file/d/13MMnzTGuf2LiSH80avUr3SUQ0RSbcw_V/view?usp=sharing)
 
 ## 팀 소개 — DIVA
 
@@ -138,6 +138,7 @@ Google Drive의 `data.zip`에는 위 원자료를 그대로 모아둔 것이 아
 | 집계구 인구·공간자료 | 연령별 인구, 대표점, 행정구역 연결에 필요한 경계 | `census_demand_points.csv`, `census_demand_points.gpkg` |
 | 학교 간 도로경로 | 통합 후보 학교 사이의 방향별 이동시간과 거리 | `api_routes/school_road_routes.csv` |
 | 집계구 대표점과 학교 간 도로경로 | 통합 전후 통학부담 계산에 필요한 이동시간과 거리 | `team_route_results/`의 배치별 경로 파일 |
+| 수집 당시 통학 요청표 원본 | 수집 결과의 원본 해시와 요청 ID·좌표·배치를 검증 | `team_route_results/commute_route_requests_source.csv` |
 
 **집계구**는 인구통계를 작성하기 위해 나눈 작은 공간 단위입니다. 분석에서는 집계구마다 대표 위치 하나를 사용합니다. 이 위치는 개별 학생의 집 주소가 아닙니다.
 
@@ -240,7 +241,7 @@ A–B–C 후보가 있다면 다음과 같이 최대 세 가지 존치학교안
 
 다만 이 계산은 학년별 학급 편성, 특별실의 전환 가능성, 교원 배치 등을 모두 반영한 실제 학교 운영계획은 아닙니다. 정확히 28명인 경우도 계산상 허용하므로, CAP28을 통과했다는 사실이 과밀학급이 발생하지 않음을 보장하지는 않습니다.
 
-초기에는 교실당 19명인 CAP19도 비교합니다. 이후 대표 통학부담·학교 공백 분석은 CAP28을 사용합니다. CAP28은 CAP19보다 수용 가능한 학생 수를 크게 잡는 가정이므로, 더 많은 통합안이 가능해질 수 있습니다.
+수용력·통학부담·학교 공백 분석은 교실당 28명인 CAP28을 사용합니다.
 
 관련 코드: [학교 수용력 평가](scripts/03-1_evaluate_capacity_scenarios.py)
 
@@ -285,7 +286,7 @@ A–B–C 후보가 있다면 다음과 같이 최대 세 가지 존치학교안
 
 **이 단계에서 결정하는 것은 A–B–C라는 묶음입니다. A·B·C 중 어느 학교를 남길지는 아직 확정하지 않습니다.** 선정된 묶음의 적격 존치학교안을 다음 단계로 모두 넘깁니다.
 
-기준 묶음은 CAP28에서 선정합니다. CAP19 비교에서는 같은 묶음의 유지 가능성을 평가하며, CAP19에 맞춰 다른 학교 묶음으로 바꾸어 재최적화하지 않습니다.
+기준 묶음은 CAP28의 적격 후보에서 선정합니다.
 
 관련 코드: [비중복 군집 선정](scripts/03-5_select_nonoverlapping_clusters.py)
 
@@ -365,7 +366,10 @@ A–B–C 후보가 있다면 다음과 같이 최대 세 가지 존치학교안
 
 이 저장소 상단의 **Code → Download ZIP**을 눌러 코드를 내려받고 압축을 해제합니다.
 
-이어서 [분석 데이터 `data.zip`](https://drive.google.com/file/d/1HgFXBW5J9d3-zDmiuqZ7gLOriOFdx4Df/view?usp=sharing)을 내려받습니다. 데이터 압축은 **`run_pipeline.py`가 있는 폴더에** 해제합니다.
+이어서 [분석 데이터 `data.zip`](https://drive.google.com/file/d/1gI2mbYeZBlatgF54blwLDYTPECRAkfMG/view?usp=sharing)을 내려받습니다. 데이터 압축은 **`run_pipeline.py`가 있는 폴더에** 해제합니다. Windows에서는 `C:\schools`처럼 짧은 프로젝트 경로를 권장합니다. 경로가 너무 길면 그래프 임시 파일 저장이 실패할 수 있습니다.
+
+배포 ZIP에는 수집 당시 원본 요청표도 포함되어 있습니다. 이 파일을 포함한
+`data/01_raw/`만 있으면 과거 생성 결과 없이 재현 실행을 시작할 수 있습니다.
 
 | 항목 | 올바른 위치 |
 | --- | --- |
@@ -376,6 +380,7 @@ A–B–C 후보가 있다면 다음과 같이 최대 세 가지 존치학교안
 | 공간자료 | `data/01_raw/` 안의 GPKG 2개 |
 | 학교 간 경로 | `data/01_raw/api_routes/school_road_routes.csv` |
 | 학생 통학경로 | `data/01_raw/team_route_results/` 안의 배치별 CSV |
+| 수집 당시 통학 요청표 | `data/01_raw/team_route_results/commute_route_requests_source.csv` |
 
 ### 2) VS Code에서 프로젝트 열기
 
@@ -396,9 +401,10 @@ py -3.12 -m venv .venv
 
 ### 4) 전체 분석 실행하기 — Windows
 
-패키지 설치가 끝나면 다음 명령을 실행합니다.
+패키지 설치가 끝나면 다음 명령을 실행합니다. Windows에서는 같은 터미널 세션에서 UTF-8 출력 설정을 먼저 적용합니다. 이 설정은 하위 분석 스크립트의 로그에도 적용됩니다.
 
 ```powershell
+$env:PYTHONIOENCODING = "utf-8"
 .\.venv\Scripts\python.exe run_pipeline.py
 ```
 
@@ -472,6 +478,25 @@ python3.12 -m venv .venv
 python run_pipeline.py --stage 5 --overwrite --font "/path/to/KoreanFont.ttf"
 ```
 
+### 수집 당시 통학 요청표 보존
+
+통학경로 결과와 함께 수집 당시의 `commute_route_requests.csv` 원본도 보존해야 합니다.
+이 파일의 SHA-256은 팀별 결과의 `source_request_file_sha256`과 일치해야 합니다.
+기본 보관 위치는 `data/01_raw/team_route_results/commute_route_requests_source.csv`입니다. 배포용 `data.zip`에 이 경로로 포함되어 있습니다.
+파일이 다른 곳에 있으면 다음처럼 지정합니다.
+
+```powershell
+$env:PYTHONIOENCODING = "utf-8"
+.\.venv\Scripts\python.exe run_pipeline.py --source-requests "원본요청표경로.csv"
+```
+
+기존 분석 폴더에 해시가 일치하는 요청표가 남아 있으면 실행기는 Stage 4 시작 전에
+`data/02_processed/commute_route_requests_source.csv`로 복사해 보존합니다.
+원본을 확보할 수 없으면 수집 결과를 새 요청표에 연결하지 않고 중단합니다.
+요청표의 부가 열 정리로 파일 해시가 바뀌어도, 수집 원본의 해시와 요청 ID·좌표·배치 등
+나머지 입력값을 검증한 뒤 기존 경로를 재사용합니다. 경로 옵션은 `traoptimal`을 유지합니다.
+새 API 호출은 수행하지 않습니다.
+
 ## 8. API 수집 코드와 공개 범위
 
 기본 실행은 **당시 수집을 완료한 도로경로 파일을 읽어 계산**합니다. 실시간 교통을 반영하는 경로를 새로 조회하면 같은 출발지와 도착지라도 시간이 달라질 수 있기 때문입니다.
@@ -491,4 +516,4 @@ python run_pipeline.py --stage 5 --overwrite --font "/path/to/KoreanFont.ttf"
 
 저장소 관리: [서동균](https://github.com/seo6347)
 
-분석 방법이나 실행 과정에 관한 질문은 [Issues](https://github.com/seo6347/Disappearing-Schools-Declining-Communities-/issues)에 남겨 주세요.
+분석 방법이나 실행 과정에 관한 질문은 [Issues](https://github.com/seo6347/Disappearing-Schools-Declining-Communities/issues)에 남겨 주세요.

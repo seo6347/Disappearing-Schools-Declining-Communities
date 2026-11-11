@@ -18,8 +18,7 @@
 - student_weight가 0보다 큰 행만 실제 통학부담 분석 및 경로 계산에 사용한다.
   0명 행을 제외해도 학교별/전체 학생 가중치 합계는 변하지 않아야 한다.
 - 같은 경로는 시나리오와 통합학교안이 달라도 한 번만 계산하고 결과를 재사용한다.
-- 기본 분석은 CAP28이다. CAP19는 CAP28의 목적학교 부분집합이므로 CAP19를 추가해도
-  고유 경로 수는 늘지 않지만, 분석 행렬 행 수는 증가한다.
+- 수용력 시나리오는 CAP28만 지원한다.
 - 이 스크립트는 길찾기 API를 호출하지 않는다. 예상 호출량을 먼저 확정하는 준비 단계다.
 - 통합버스 30분 약속 검증의 1차 결과는 '대표점에서 통합학교까지 직행 차량 시간'이다.
   여러 마을을 순회하는 실제 통학버스 탑승시간보다 유리한 하한값임을 후속 기사에서 명시한다.
@@ -41,11 +40,8 @@
 실행 예시
     python scripts/04-1_prepare_commute_route_requests.py
 
-CAP28 요청을 3개 작업 묶음으로 나눠 팀에 분담하는 경우
-    python scripts/04-1_prepare_commute_route_requests.py --batch-count 3
-
-CAP19 재평가 행렬까지 함께 만드는 경우
-    python scripts/04-1_prepare_commute_route_requests.py --scenarios CAP28,CAP19
+CAP28 요청을 기존 수집과 같은 2개 작업 묶음으로 나누는 경우
+    python scripts/04-1_prepare_commute_route_requests.py --batch-count 2
 
 다른 프로젝트 경로를 직접 지정하는 경우
     python scripts/04-1_prepare_commute_route_requests.py --project-root "C:/.../final_project"
@@ -91,13 +87,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--scenarios",
         default="CAP28",
-        help="쉼표로 구분한 수용력 시나리오. 기본값: CAP28",
+        help="지원하는 수용력 시나리오: CAP28",
     )
     parser.add_argument(
         "--batch-count",
         type=int,
-        default=1,
-        help="경로 요청을 안정적으로 나눌 팀 작업 묶음 수. 기본값: 1",
+        default=2,
+        choices=[2],
+        help="경로 요청을 안정적으로 나눌 팀 작업 묶음 수. 지원값: 2",
     )
     return parser.parse_args()
 
@@ -193,8 +190,8 @@ def main() -> None:
     requested_scenarios = [
         value.strip().upper() for value in args.scenarios.split(",") if value.strip()
     ]
-    if not requested_scenarios:
-        raise ValueError("--scenarios에 하나 이상의 시나리오를 입력해야 합니다.")
+    if requested_scenarios != ["CAP28"]:
+        raise ValueError("--scenarios는 CAP28만 지원합니다.")
     output_dir = project_root / "data" / "03_outputs"
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -245,6 +242,8 @@ def main() -> None:
         SELECTED_OPTION_FILE,
     )
     available_scenarios = set(options["capacity_scenario_id"].dropna().str.upper())
+    if available_scenarios != {"CAP28"} or options["capacity_scenario_id"].isna().any():
+        raise ValueError("CAP28 존치학교안만 지원합니다.")
     missing_scenarios = sorted(set(requested_scenarios) - available_scenarios)
     if missing_scenarios:
         raise ValueError(
@@ -401,7 +400,7 @@ def main() -> None:
 
     option_keep = [
         "final_cluster_id", "candidate_id", "capacity_scenario_id", "scenario_role",
-        "cap19_cluster_status", "capacity_option_id", "students_per_class", "total_demand",
+        "capacity_option_id", "students_per_class", "total_demand",
         "retained_school_key", "retained_school_name", "closed_school_1_key",
         "closed_school_1_name", "closed_school_2_key", "closed_school_2_name",
         "retained_capacity", "capacity_margin", "capacity_utilization_rate",
@@ -528,7 +527,6 @@ def main() -> None:
     usage["current_role_flag"] = usage["route_role"].eq("CURRENT")
     usage["integrated_role_flag"] = usage["route_role"].eq("INTEGRATED")
     usage["cap28_role_flag"] = usage["capacity_scenario_id"].eq("CAP28")
-    usage["cap19_role_flag"] = usage["capacity_scenario_id"].eq("CAP19")
 
     request_agg = (
         usage.groupby(["census_id", "destination_school_key"], as_index=False)
@@ -537,14 +535,13 @@ def main() -> None:
             required_for_current_flag=("current_role_flag", "max"),
             required_for_integrated_flag=("integrated_role_flag", "max"),
             required_for_cap28_flag=("cap28_role_flag", "max"),
-            required_for_cap19_flag=("cap19_role_flag", "max"),
             final_cluster_count=("final_cluster_id", "nunique"),
             final_cluster_ids=("final_cluster_id", unique_join),
             integration_option_count=("integration_option_id", lambda s: s[s.ne("")].nunique()),
         )
     )
 
-    # 노출 학생수는 CAP28/CAP19 중복을 제거한 현재학교-목적학교 단위로 합산한다.
+    # 노출 학생수는 존치학교안 간 중복을 제거한 현재학교-목적학교 단위로 합산한다.
     current_exposure = (
         current_usage.groupby(["census_id", "destination_school_key"], as_index=False)["student_weight"]
         .sum()
@@ -639,7 +636,7 @@ def main() -> None:
         "destination_school_area_type", "destination_school_population_decline_type",
         "destination_school_current_enrollment", "straight_distance_km", "route_roles",
         "required_for_current_flag", "required_for_integrated_flag", "required_for_cap28_flag",
-        "required_for_cap19_flag", "final_cluster_count", "final_cluster_ids",
+        "final_cluster_count", "final_cluster_ids",
         "integration_option_count", "current_exposed_student_weight",
         "integrated_exposed_student_weight", "request_batch_number", "request_batch_id",
         "routing_provider", "routing_status",

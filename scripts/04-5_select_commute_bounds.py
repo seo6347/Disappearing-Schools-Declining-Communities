@@ -202,6 +202,8 @@ def main() -> None:
     ]
     require_columns(options, option_required, OPTION_FILE)
     require_columns(detail, detail_required, DETAIL_FILE)
+    if options["capacity_scenario_id"].isna().any() or set(options["capacity_scenario_id"]) != {"CAP28"}:
+        raise ValueError("CAP28 자료만 지원합니다.")
 
     if options.empty or detail.empty:
         raise ValueError("입력 파일이 비어 있습니다.")
