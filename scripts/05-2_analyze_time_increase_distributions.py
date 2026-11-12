@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
-"""06. Analyze and visualize commute-time and distance changes after consolidation.
+"""
+Stage 5 supplementary time-increase analysis; school selection is already frozen.
+05-2. Analyze and visualize commute-time and distance changes after consolidation.
 
 Default analysis population
 ---------------------------
-* lower-bound integration option (LOWER_BOUND)
-* option selected using all students (ALL_STUDENTS)
+* fixed representative integration scenario (Stage 4)
+* schools fixed by all-student additional time burden
 * moved students only
 * route-analysis eligible rows only
 * students whose one-way commute time increased
@@ -26,6 +28,8 @@ Outputs
 """
 
 from __future__ import annotations
+
+from final_scenario_io import SCENARIO_ID, load_final_scenario
 
 import argparse
 import json
@@ -68,13 +72,13 @@ def parse_args() -> argparse.Namespace:
         "--analysis-root",
         type=Path,
         default=Path("."),
-        help="Project root; the input CSV is found recursively.",
+        help="Project root containing frozen Stage 4 outputs.",
     )
     parser.add_argument(
         "--input",
         type=Path,
         default=None,
-        help="Optional explicit path to commute_bound_demand_results.csv.",
+        help="Optional explicit path to final_integration_demand_assignments.csv.",
     )
     parser.add_argument(
         "--output-dir",
@@ -82,18 +86,8 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help=(
             "Default: <analysis-root>/data/04_visualization/"
-            "commute_increase_distributions"
+            "final_time_increase_distributions"
         ),
-    )
-    parser.add_argument(
-        "--bound-type",
-        default="LOWER_BOUND",
-        choices=["LOWER_BOUND", "UPPER_BOUND"],
-    )
-    parser.add_argument(
-        "--selection-population",
-        default="ALL_STUDENTS",
-        choices=["ALL_STUDENTS", "MOVED_STUDENTS"],
     )
     parser.add_argument(
         "--font",
@@ -145,14 +139,10 @@ def require_columns(df: pd.DataFrame, columns: Sequence[str]) -> None:
 
 def select_population(
     df: pd.DataFrame,
-    bound_type: str,
-    selection_population: str,
 ) -> pd.DataFrame:
     require_columns(
         df,
         [
-            "bound_type",
-            "selection_population",
             "demand_assignment_id",
             "census_id",
             "final_cluster_id",
@@ -166,9 +156,7 @@ def select_population(
     )
 
     mask = (
-        df["bound_type"].eq(bound_type)
-        & df["selection_population"].eq(selection_population)
-        & normalize_bool(df["moved_student_flag"])
+        normalize_bool(df["moved_student_flag"])
         & normalize_bool(df["commute_analysis_eligible_flag"])
         & normalize_bool(df["time_increase_flag"])
     )
@@ -497,21 +485,19 @@ def main() -> int:
     input_path = (
         args.input.expanduser().resolve()
         if args.input
-        else find_input(root, "commute_bound_demand_results.csv")
+        else root / "data/03_outputs/final_integration_demand_assignments.csv"
     )
     output_dir = (
         args.output_dir.expanduser().resolve()
         if args.output_dir
-        else root / "data" / "04_visualization" / "commute_increase_distributions"
+        else root / "data" / "04_visualization" / "final_time_increase_distributions"
     )
     prepare_output(output_dir, args.overwrite)
 
     print(f"[LOAD] {input_path}")
-    raw = pd.read_csv(input_path, encoding="utf-8-sig", low_memory=False)
+    _, _, raw = load_final_scenario(root, input_path)
     population = select_population(
         raw,
-        bound_type=args.bound_type,
-        selection_population=args.selection_population,
     )
 
     weights = population["student_weight"]
@@ -643,12 +629,11 @@ def main() -> int:
     )
 
     manifest = {
+        "scenario_id": SCENARIO_ID,
         "generated_at_utc": datetime.now(timezone.utc).isoformat(),
         "script": Path(__file__).name,
         "input": str(input_path),
         "filters": {
-            "bound_type": args.bound_type,
-            "selection_population": args.selection_population,
             "moved_student_flag": True,
             "commute_analysis_eligible_flag": True,
             "time_increase_flag": True,

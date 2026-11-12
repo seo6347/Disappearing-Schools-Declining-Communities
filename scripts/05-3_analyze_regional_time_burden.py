@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-"""07. Compare regional commute burdens and population-decline groups.
+"""
+Stage 5 supplementary time-increase analysis; school selection is already frozen.
+05-3. Compare regional commute burdens and population-decline groups.
 
 Regional unit
 -------------
@@ -11,7 +13,7 @@ must be described as school-affiliation regions, not residence-region rankings.
 
 Default population
 ------------------
-* LOWER_BOUND and ALL_STUDENTS
+* frozen Stage 4 representative scenario
 * moved students
 * commute-analysis eligible
 * one-way commute time increased
@@ -23,6 +25,8 @@ are excluded with configurable student and census-point thresholds.
 """
 
 from __future__ import annotations
+
+from final_scenario_io import SCENARIO_ID, load_final_scenario
 
 import argparse
 import json
@@ -58,7 +62,7 @@ def parse_args() -> argparse.Namespace:
         "--input",
         type=Path,
         default=None,
-        help="Optional explicit commute_bound_demand_results.csv path.",
+        help="Optional explicit final_integration_demand_assignments.csv path.",
     )
     parser.add_argument(
         "--output-dir",
@@ -66,18 +70,8 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help=(
             "Default: <analysis-root>/data/04_visualization/"
-            "regional_commute_burden"
+            "final_regional_time_burden"
         ),
-    )
-    parser.add_argument(
-        "--bound-type",
-        default="LOWER_BOUND",
-        choices=["LOWER_BOUND", "UPPER_BOUND"],
-    )
-    parser.add_argument(
-        "--selection-population",
-        default="ALL_STUDENTS",
-        choices=["ALL_STUDENTS", "MOVED_STUDENTS"],
     )
     parser.add_argument(
         "--min-estimated-students",
@@ -145,14 +139,10 @@ def require_columns(df: pd.DataFrame, columns: Sequence[str]) -> None:
 
 def select_population(
     df: pd.DataFrame,
-    bound_type: str,
-    selection_population: str,
 ) -> pd.DataFrame:
     require_columns(
         df,
         [
-            "bound_type",
-            "selection_population",
             "demand_assignment_id",
             "census_id",
             "final_cluster_id",
@@ -167,9 +157,7 @@ def select_population(
         ],
     )
     mask = (
-        df["bound_type"].eq(bound_type)
-        & df["selection_population"].eq(selection_population)
-        & normalize_bool(df["moved_student_flag"])
+        normalize_bool(df["moved_student_flag"])
         & normalize_bool(df["commute_analysis_eligible_flag"])
         & normalize_bool(df["time_increase_flag"])
     )
@@ -498,21 +486,21 @@ def main() -> int:
     input_path = (
         args.input.expanduser().resolve()
         if args.input
-        else find_input(root, "commute_bound_demand_results.csv")
+        else root / "data/03_outputs/final_integration_demand_assignments.csv"
     )
     output_dir = (
         args.output_dir.expanduser().resolve()
         if args.output_dir
-        else root / "data" / "04_visualization" / "regional_commute_burden"
+        else root / "data" / "04_visualization" / "final_regional_time_burden"
     )
     if args.min_estimated_students < 0 or args.min_census_points < 1:
         raise ValueError("Minimum sample thresholds must be non-negative/positive.")
     prepare_output(output_dir, args.overwrite)
 
     print(f"[LOAD] {input_path}")
-    raw = pd.read_csv(input_path, encoding="utf-8-sig", low_memory=False)
+    _, _, raw = load_final_scenario(root, input_path)
     population = select_population(
-        raw, args.bound_type, args.selection_population
+        raw
     )
     national = summarize_group(population)
     national_table = pd.DataFrame([{"region": "전국", **national}])
@@ -637,6 +625,7 @@ def main() -> int:
         )
 
     manifest = {
+        "scenario_id": SCENARIO_ID,
         "generated_at_utc": datetime.now(timezone.utc).isoformat(),
         "script": Path(__file__).name,
         "input": str(input_path),
@@ -645,8 +634,6 @@ def main() -> int:
             "Current assigned school's education support office; not student residence region."
         ),
         "filters": {
-            "bound_type": args.bound_type,
-            "selection_population": args.selection_population,
             "moved_student_flag": True,
             "commute_analysis_eligible_flag": True,
             "time_increase_flag": True,

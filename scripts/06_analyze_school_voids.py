@@ -1,9 +1,9 @@
 """
-05. 초등학교 공백지대(교육 인프라 공동화) 기본 분석
+06. 초등학교 공백지대(교육 인프라 공동화) 기본 분석
 
 목적
 ----
-1) 하한(LOWER_BOUND) 통합학교안을 적용했을 때 읍·면별 공립 초등학교 본교 수가
+1) 확정 대표 통합학교안을 적용했을 때 읍·면별 공립 초등학교 본교 수가
    통합 전후에 어떻게 달라지는지 계산한다.
 2) 마지막 공립 초등학교 본교가 사라지는 읍·면과 그 지역의 집계구·학생 노출량을 구한다.
 3) 이후 전국/지역/인구감소지역 등 원하는 기사·시각화 단위로 즉시 재집계할 수 있도록
@@ -12,7 +12,7 @@
 중요한 해석 기준
 ----------------
 - 현재 학교 모집단: elementary_master.csv의 '공립'이면서 '본교'인 초등학교 전체.
-- 통합 후 학교: 현재 모집단에서 하한 통합학교안의 폐교 대상 2개교만 제거.
+- 통합 후 학교: 현재 모집단에서 확정 시나리오 통합학교안의 폐교 대상 2개교만 제거.
 - 읍·면: 학교 주소에서 읍/면 명칭을 추출하고, 집계구 경계의 ADM_CD와 공간 연결하여
   집계구를 같은 읍·면에 귀속시킨다. 동 지역은 이번 읍·면 공백 분석에서 제외한다.
 - 학생 노출량은 두 값을 함께 보존한다.
@@ -30,22 +30,22 @@
 - census_demand_points.gpkg  (census_boundary 레이어 필요)
 - census_demand_points.csv
 - current_student_distribution.csv
-- commute_bound_demand_results.csv
+- final_integration_demand_assignments.csv
 
 산출물(기본 위치: data/03_outputs)
 ---------------------------------
-- school_void_school_status.csv
+- final_school_void_school_status.csv
   공립 본교별 통합 전후 존치/폐교 상태와 읍·면·ADM_CD 연결 상태
-- school_void_demand_exposure.csv
-  모든 집계구별 인구·학생가중치·하한 통합학교안 노출 및 마지막 학교 소멸 여부
-- school_void_eupmyeon_summary.csv
+- final_school_void_demand_exposure.csv
+  모든 집계구별 인구·학생가중치·확정 시나리오 통합학교안 노출 및 마지막 학교 소멸 여부
+- final_school_void_eupmyeon_summary.csv
   읍·면별 통합 전후 학교 수, 마지막 학교 소멸, 학생·통학시간 노출 요약
-- school_void_validation_summary.csv
+- final_school_void_validation_summary.csv
   입력·선택·공간연결·산출물 검증값과 아직 계산하지 않은 지표의 명시적 기록
 
 실행 예시
 ---------
-python scripts/05_analyze_school_voids.py
+python scripts/06_analyze_school_voids.py
 
 필요 패키지
 -----------
@@ -53,6 +53,8 @@ pip install pandas geopandas pyogrio
 """
 
 from __future__ import annotations
+
+from final_scenario_io import SCENARIO_ID, load_final_scenario
 
 import argparse
 import re
@@ -68,18 +70,16 @@ except ImportError as exc:  # pragma: no cover - 실행환경 안내용
     raise ImportError("geopandas가 필요합니다: pip install geopandas pyogrio") from exc
 
 
-SELECTION_POPULATION = "ALL_STUDENTS"
-BOUND_TYPE = "LOWER_BOUND"
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="하한 통합학교안 기준 초등학교 공백지대 분석")
+    parser = argparse.ArgumentParser(description="확정 시나리오 통합학교안 기준 초등학교 공백지대 분석")
     parser.add_argument("--project-root", type=Path, default=None)
     parser.add_argument("--elementary-master", type=Path, default=None)
     parser.add_argument("--census-gpkg", type=Path, default=None)
     parser.add_argument("--census-csv", type=Path, default=None)
     parser.add_argument("--student-distribution", type=Path, default=None)
-    parser.add_argument("--commute-bound-results", type=Path, default=None)
+    parser.add_argument("--final-demand-results", type=Path, default=None)
     parser.add_argument("--output-dir", type=Path, default=None)
     return parser.parse_args()
 
@@ -172,26 +172,8 @@ def weighted_mean_from_sums(numerator: pd.Series, denominator: pd.Series) -> pd.
     return numerator.div(denominator.where(denominator > 0))
 
 
-def load_lower_bound_detail(path: Path) -> pd.DataFrame:
-    detail = pd.read_csv(path, encoding="utf-8-sig", low_memory=False)
-    required = [
-        "selection_id", "final_cluster_id", "selection_population", "bound_type",
-        "integration_option_id", "demand_assignment_id", "census_id", "student_weight",
-        "current_school_key", "current_school_name", "integrated_school_key",
-        "integrated_school_name", "merged_school_1_key", "merged_school_1_name",
-        "merged_school_2_key", "merged_school_2_name", "moved_student_flag",
-        "commute_analysis_eligible_flag", "current_analysis_road_duration_min",
-        "integrated_analysis_road_duration_min", "road_duration_change_min",
-        "integrated_over_30_min_flag",
-    ]
-    require_columns(detail, required, path.name)
-    detail = detail.loc[
-        clean_string(detail["selection_population"]).eq(SELECTION_POPULATION)
-        & clean_string(detail["bound_type"]).eq(BOUND_TYPE)
-    ].copy()
-    if detail.empty:
-        raise ValueError(f"{SELECTION_POPULATION}/{BOUND_TYPE} 행이 없습니다.")
-
+def load_final_scenario_detail(root: Path, path: Path) -> pd.DataFrame:
+    _, _, detail = load_final_scenario(root, path)
     for col in ["student_weight", "current_analysis_road_duration_min",
                 "integrated_analysis_road_duration_min", "road_duration_change_min"]:
         detail[col] = pd.to_numeric(detail[col], errors="coerce")
@@ -206,11 +188,11 @@ def load_lower_bound_detail(path: Path) -> pd.DataFrame:
     cluster_option_n = detail.groupby("final_cluster_id")["integration_option_id"].nunique()
     if cluster_option_n.gt(1).any():
         bad = cluster_option_n[cluster_option_n.gt(1)].head().to_dict()
-        raise ValueError(f"하한에서 한 군집에 복수 통합학교안이 선택되었습니다: {bad}")
+        raise ValueError(f"확정 시나리오에서 한 군집에 복수 통합학교안이 선택되었습니다: {bad}")
     if detail["demand_assignment_id"].duplicated().any():
         examples = detail.loc[detail["demand_assignment_id"].duplicated(False),
                               "demand_assignment_id"].head().tolist()
-        raise ValueError(f"하한 상세행의 demand_assignment_id가 중복됩니다: {examples}")
+        raise ValueError(f"확정 시나리오 상세행의 demand_assignment_id가 중복됩니다: {examples}")
     return detail
 
 
@@ -223,7 +205,7 @@ def build_cluster_decisions(detail: pd.DataFrame) -> pd.DataFrame:
     ]
     decisions = detail[cols].drop_duplicates().copy()
     if decisions["final_cluster_id"].duplicated().any():
-        raise ValueError("최종 군집별 하한 통합학교안이 1개로 확정되지 않았습니다.")
+        raise ValueError("최종 군집별 확정 시나리오 통합학교안이 1개로 확정되지 않았습니다.")
     closed_long = pd.concat([
         decisions[["final_cluster_id", "merged_school_1_key"]]
         .rename(columns={"merged_school_1_key": "school_key"}),
@@ -262,13 +244,13 @@ def build_school_universe(master_path: Path, decisions: pd.DataFrame) -> pd.Data
     selected = retained | closed
     missing = sorted(selected - set(schools["school_key"]))
     if missing:
-        raise ValueError(f"하한 군집 학교가 공립 본교 모집단에 없습니다: {missing[:10]}")
+        raise ValueError(f"확정 시나리오 군집 학교가 공립 본교 모집단에 없습니다: {missing[:10]}")
     schools["scenario_school_status"] = np.select(
         [schools["school_key"].isin(closed), schools["school_key"].isin(retained)],
-        ["CLOSED_BY_LOWER_BOUND", "RETAINED_IN_LOWER_BOUND"],
+        ["CLOSED_BY_FINAL_SCENARIO", "RETAINED_IN_FINAL_SCENARIO"],
         default="UNCHANGED_REMAINING",
     )
-    schools["remaining_after_lower_bound_flag"] = ~schools["school_key"].isin(closed)
+    schools["remaining_after_final_scenario_flag"] = ~schools["school_key"].isin(closed)
 
     schools["eupmyeon_name"] = schools["소재지지번주소"].map(extract_eupmyeon)
     fallback = schools["eupmyeon_name"].isna()
@@ -377,7 +359,7 @@ def aggregate_current_student_weights(path: Path) -> pd.DataFrame:
     )
 
 
-def aggregate_lower_detail_by_census(detail: pd.DataFrame) -> pd.DataFrame:
+def aggregate_final_detail_by_census(detail: pd.DataFrame) -> pd.DataFrame:
     d = detail.copy()
     weight = d["student_weight"].fillna(0.0)
     eligible = d["commute_analysis_eligible_flag"].fillna(False)
@@ -437,9 +419,9 @@ def aggregate_lower_detail_by_census(detail: pd.DataFrame) -> pd.DataFrame:
 
 def build_school_unit_summary(schools: pd.DataFrame) -> pd.DataFrame:
     subset = schools.loc[schools["eupmyeon_key"].notna()].copy()
-    subset["closed_flag"] = subset["scenario_school_status"].eq("CLOSED_BY_LOWER_BOUND").astype(int)
-    subset["retained_cluster_flag"] = subset["scenario_school_status"].eq("RETAINED_IN_LOWER_BOUND").astype(int)
-    subset["remaining_flag"] = subset["remaining_after_lower_bound_flag"].astype(int)
+    subset["closed_flag"] = subset["scenario_school_status"].eq("CLOSED_BY_FINAL_SCENARIO").astype(int)
+    subset["retained_cluster_flag"] = subset["scenario_school_status"].eq("RETAINED_IN_FINAL_SCENARIO").astype(int)
+    subset["remaining_flag"] = subset["remaining_after_final_scenario_flag"].astype(int)
     summary = subset.groupby("eupmyeon_key", as_index=False).agg(
         sido_name=("sido_name", "first"),
         sigungu_name=("sigungu_name", "first"),
@@ -475,7 +457,7 @@ def build_school_unit_summary(schools: pd.DataFrame) -> pd.DataFrame:
 def build_demand_exposure(
     census_csv_path: Path,
     current_weights: pd.DataFrame,
-    lower_census: pd.DataFrame,
+    final_census: pd.DataFrame,
     adm_map: pd.DataFrame,
     school_units: pd.DataFrame,
 ) -> pd.DataFrame:
@@ -495,7 +477,7 @@ def build_demand_exposure(
         demand["eupmyeon_key"].notna(), "MAPPED_BY_ADM_CD", "NOT_MAPPED_TO_ANALYZED_EUPMYEON"
     )
     demand = demand.merge(current_weights, on="census_id", how="left", validate="one_to_one")
-    demand = demand.merge(lower_census, on="census_id", how="left", validate="one_to_one")
+    demand = demand.merge(final_census, on="census_id", how="left", validate="one_to_one")
 
     zero_cols = [
         "calibrated_student_weight", "selected_cluster_student_weight", "moved_student_weight",
@@ -571,25 +553,25 @@ def main() -> None:
         "gpkg": find_input(root, "census_demand_points.gpkg", args.census_gpkg),
         "census": find_input(root, "census_demand_points.csv", args.census_csv),
         "distribution": find_input(root, "current_student_distribution.csv", args.student_distribution),
-        "bounds": find_input(root, "commute_bound_demand_results.csv", args.commute_bound_results),
+        "scenario_detail": find_input(root, "final_integration_demand_assignments.csv", args.final_demand_results),
     }
     output_dir = (args.output_dir or root / "data" / "03_outputs").expanduser().resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    print("[1/7] 하한 통합학교안 확인")
-    detail = load_lower_bound_detail(paths["bounds"])
+    print("[1/7] 확정 시나리오 통합학교안 확인")
+    detail = load_final_scenario_detail(root, paths["scenario_detail"])
     decisions = build_cluster_decisions(detail)
     print("[2/7] 전국 공립 초등학교 본교 모집단 구성")
     schools = build_school_universe(paths["master"], decisions)
     print("[3/7] 학교 좌표와 집계구 행정경계 연결")
     schools, adm_map = assign_school_admin_codes(schools, paths["gpkg"])
-    print("[4/7] 집계구 학생가중치와 하한 통학노출 집계")
+    print("[4/7] 집계구 학생가중치와 확정 시나리오 통학노출 집계")
     current_weights = aggregate_current_student_weights(paths["distribution"])
-    lower_census = aggregate_lower_detail_by_census(detail)
+    final_census = aggregate_final_detail_by_census(detail)
     print("[5/7] 학교·집계구·읍면 기본 테이블 생성")
     school_units = build_school_unit_summary(schools)
     demand = build_demand_exposure(
-        paths["census"], current_weights, lower_census, adm_map, school_units
+        paths["census"], current_weights, final_census, adm_map, school_units
     )
     demand_units = aggregate_demand_by_unit(demand)
     eupmyeon = school_units.merge(demand_units, on="eupmyeon_key", how="left", validate="one_to_one")
@@ -613,21 +595,20 @@ def main() -> None:
     retained_count = decisions["integrated_school_key"].nunique()
     closed_keys = set(decisions["merged_school_1_key"]) | set(decisions["merged_school_2_key"])
     validation = [
-        validation_row("selection_population", SELECTION_POPULATION, "PASS"),
-        validation_row("bound_type", BOUND_TYPE, "PASS", "기사 기본값으로 사용할 하한 통합학교안"),
+        validation_row("scenario_id", SCENARIO_ID, "PASS", "Stage 4에서 확정한 단일 대표 시나리오"),
         validation_row("final_cluster_count", decisions["final_cluster_id"].nunique(), "PASS"),
         validation_row("retained_cluster_school_count", retained_count, "PASS"),
         validation_row("closed_school_count", len(closed_keys), "PASS"),
         validation_row("public_main_school_count_before", len(schools), "PASS"),
         validation_row(
             "public_main_school_count_after",
-            int(schools["remaining_after_lower_bound_flag"].sum()),
+            int(schools["remaining_after_final_scenario_flag"].sum()),
             "PASS",
         ),
         validation_row(
             "school_count_identity_check",
-            int(schools["remaining_after_lower_bound_flag"].sum()) + len(closed_keys),
-            "PASS" if int(schools["remaining_after_lower_bound_flag"].sum()) + len(closed_keys) == len(schools) else "FAIL",
+            int(schools["remaining_after_final_scenario_flag"].sum()) + len(closed_keys),
+            "PASS" if int(schools["remaining_after_final_scenario_flag"].sum()) + len(closed_keys) == len(schools) else "FAIL",
             "통합 후 잔존학교 + 폐교학교 = 통합 전 공립 본교",
         ),
         validation_row("school_eupmyeon_parsed_count", int(schools["eupmyeon_key"].notna().sum()), "INFO"),
@@ -663,7 +644,7 @@ def main() -> None:
         "school_key", "학교명", "시도교육청", "교육지원청", "지역",
         "sido_name", "sigungu_name", "eupmyeon_name", "eupmyeon_key", "adm_cd",
         "school_admin_match_status", "adm_cd_candidates", "scenario_school_status",
-        "remaining_after_lower_bound_flag", "지역구분", "인구감소지역",
+        "remaining_after_final_scenario_flag", "지역구분", "인구감소지역",
         "소재지지번주소", "소재지도로명주소", "longitude", "latitude",
     ]
     require_columns(schools, school_output_cols, "school output")
@@ -675,10 +656,10 @@ def main() -> None:
     validation_df = pd.DataFrame(validation)
 
     outputs = {
-        "school_void_school_status.csv": schools_out,
-        "school_void_demand_exposure.csv": demand,
-        "school_void_eupmyeon_summary.csv": eupmyeon,
-        "school_void_validation_summary.csv": validation_df,
+        "final_school_void_school_status.csv": schools_out,
+        "final_school_void_demand_exposure.csv": demand,
+        "final_school_void_eupmyeon_summary.csv": eupmyeon,
+        "final_school_void_validation_summary.csv": validation_df,
     }
     print("[7/7] 산출물 저장")
     for filename, frame in outputs.items():

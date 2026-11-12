@@ -1,4 +1,4 @@
-"""Run five analysis stages using archived route data, without API credentials."""
+"""Run six analysis stages using archived route data, without API credentials."""
 from __future__ import annotations
 
 import argparse
@@ -26,11 +26,11 @@ def execute(root: Path, filename: str, *options: str) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--stage", choices=["all", "1", "2", "3", "4", "5"], default="all")
+    parser.add_argument("--stage", choices=["all", "1", "2", "3", "4", "5", "6"], default="all")
     parser.add_argument("--project-root", type=Path, default=ROOT,
                         help="Data/output root; defaults to the folder containing this runner.")
-    parser.add_argument("--overwrite", action="store_true", help="Replace Step 06/07 generated outputs.")
-    parser.add_argument("--font", type=Path, help="Optional Korean font file for Step 06/07 plots.")
+    parser.add_argument("--overwrite", action="store_true", help="Replace Stage 5 supplementary visualization outputs.")
+    parser.add_argument("--font", type=Path, help="Optional Korean font file for Stage 5 supplementary plots.")
     parser.add_argument("--source-requests", type=Path,
                         help="Original collection request CSV whose SHA-256 is recorded in archived commute results.")
     args = parser.parse_args()
@@ -41,13 +41,20 @@ def main() -> None:
                 "api_routes/school_road_routes.csv",
                 "team_route_results/naver_commute_routes_B01_of_02.csv",
                 "team_route_results/naver_commute_routes_B02_of_02.csv"]
-    missing = [str(raw / p) for p in required if not (raw / p).is_file()]
+    # Influence analysis reads frozen choices, not the route collection inputs.
+    # Infrastructure analysis additionally needs the original population/geography.
+    checked_inputs = (
+        [] if args.stage == "5" else
+        ["elementary_master.csv", "census_demand_points.csv", "census_demand_points.gpkg"]
+        if args.stage == "6" else required
+    )
+    missing = [str(raw / p) for p in checked_inputs if not (raw / p).is_file()]
     if missing:
         raise FileNotFoundError("Missing prepared input files:\n" + "\n".join(missing))
     base = ["--project-root", str(root)]
-    stages = range(1, 6) if args.stage == "all" else [int(args.stage)]
+    stages = range(1, 7) if args.stage == "all" else [int(args.stage)]
     for stage in stages:
-        print(f"\n[STAGE {stage}/5]", flush=True)
+        print(f"\n[STAGE {stage}/6]", flush=True)
         if stage == 1:
             execute(root, "01_estimate_current_student_distribution.py", *base)
         elif stage == 2:
@@ -96,18 +103,20 @@ def main() -> None:
             execute(root, "04-1_prepare_commute_route_requests.py", *base, "--scenarios", "CAP28", "--batch-count", "2")
             # 04-2 is deliberately not run: 04-3 reads archived team API results.
             for filename in ["04-3_merge_team_commute_routes.py", "04-4_calculate_commute_time_changes.py",
-                             "04-5_select_commute_bounds.py"]:
+                             "04-5_select_final_retained_schools.py"]:
                 options = ["--source-requests", str(source_requests)] if filename.startswith("04-3") else []
                 execute(root, filename, *base, *options)
-        else:
-            execute(root, "05_analyze_school_voids.py", *base)
-            opts = ["--analysis-root", str(root), "--input", str(root / "data/03_outputs/commute_bound_demand_results.csv")]
+        elif stage == 5:
+            execute(root, "05-1_analyze_final_commute_impacts.py", *base)
+            opts = ["--analysis-root", str(root)]
             if args.overwrite:
                 opts.append("--overwrite")
             if args.font:
                 opts.extend(["--font", str(args.font.expanduser().resolve())])
-            for filename in ["06_analyze_commute_increase_distributions.py", "07_analyze_regional_commute_burden.py"]:
+            for filename in ["05-2_analyze_time_increase_distributions.py", "05-3_analyze_regional_time_burden.py"]:
                 execute(root, filename, *opts)
+        else:
+            execute(root, "06_analyze_school_voids.py", *base)
     print("\n[DONE] Requested analysis stages completed. No live API collection was requested.", flush=True)
 
 
