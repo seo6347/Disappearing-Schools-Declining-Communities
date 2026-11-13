@@ -29,7 +29,7 @@ def main() -> None:
     parser.add_argument("--stage", choices=["all", "1", "2", "3", "4", "5", "6"], default="all")
     parser.add_argument("--project-root", type=Path, default=ROOT,
                         help="Data/output root; defaults to the folder containing this runner.")
-    parser.add_argument("--overwrite", action="store_true", help="Replace Stage 5 supplementary visualization outputs.")
+    parser.add_argument("--overwrite", action="store_true", help="Replace outputs only within each selected Stage 5 analysis/population.")
     parser.add_argument("--font", type=Path, help="Optional Korean font file for Stage 5 supplementary plots.")
     parser.add_argument("--source-requests", type=Path,
                         help="Original collection request CSV whose SHA-256 is recorded in archived commute results.")
@@ -107,13 +107,15 @@ def main() -> None:
                 options = ["--source-requests", str(source_requests)] if filename.startswith("04-3") else []
                 execute(root, filename, *base, *options)
         elif stage == 5:
-            execute(root, "05-1_analyze_final_commute_impacts.py", *base)
-            opts = ["--analysis-root", str(root)]
+            opts = list(base)
             if args.overwrite:
                 opts.append("--overwrite")
             if args.font:
                 opts.extend(["--font", str(args.font.expanduser().resolve())])
-            for filename in ["05-2_analyze_time_increase_distributions.py", "05-3_analyze_regional_time_burden.py"]:
+            for filename in ["05-1_analyze_final_commute_impacts.py",
+                             "05-2_analyze_distance_change_distributions.py",
+                             "05-3_analyze_regional_distance_burden.py",
+                             "05-4_analyze_commute_time_thresholds.py"]:
                 execute(root, filename, *opts)
         else:
             execute(root, "06_analyze_school_voids.py", *base)
