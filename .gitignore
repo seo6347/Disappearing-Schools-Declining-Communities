@@ -18,3 +18,13 @@ logs/
 !/requirements.txt
 !/run_pipeline.py
 !/scripts/
+
+# Local validation and analysis artifacts are not published.
+/tests/
+/data/
+/logs/
+/.venv/
+/venv/
+/local/
+/backups/
+/reports/

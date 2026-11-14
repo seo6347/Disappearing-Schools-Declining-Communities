@@ -271,6 +271,34 @@ def build_school_universe(master_path: Path, decisions: pd.DataFrame) -> pd.Data
     return schools
 
 
+def correct_jeil_yangji_link(schools: pd.DataFrame) -> pd.DataFrame:
+    out = schools.copy()
+    target = out.loc[out["school_key"].eq("ES01335")]
+    if target.empty:
+        return out
+    peers = out.loc[out["school_key"].isin(["ES01307", "ES01348"])]
+    canonical = "경기도용인시처인구|양지면"
+    fields = ["지역", "sido_name", "sigungu_name", "eupmyeon_name", "eupmyeon_key"]
+    # 제일초의 두 주소는 용인시 처인구 양지면이며, 양지초·한터초와
+    # 기존 SGIS 코드 31191360이 같다. 상위 지역 결측으로 생긴 별도 키만 통합한다.
+    # 주소·좌표·학교 상태·인구감소 분류 및 다른 학교의 귀속은 변경하지 않는다.
+    if (len(target) != 1 or len(peers) != 2
+            or not target["adm_cd"].eq("31191360").all()
+            or not peers["adm_cd"].eq("31191360").all()
+            or not peers["eupmyeon_key"].eq(canonical).all()
+            or peers[fields].nunique(dropna=False).gt(1).any()):
+        raise ValueError("ES01335 Yangji linkage evidence changed; manual review required")
+    for column in ["소재지지번주소", "소재지도로명주소"]:
+        if not target[column].astype("string").str.contains("용인시 처인구 양지면", regex=False).fillna(False).all():
+            raise ValueError("ES01335 address does not support the reviewed Yangji linkage")
+    if target.iloc[0]["eupmyeon_key"] == canonical:
+        return out
+    if target.iloc[0]["eupmyeon_key"] != "|양지면":
+        raise ValueError("ES01335 has an unexpected unit key; manual review required")
+    out.loc[out["school_key"].eq("ES01335"), fields] = peers.iloc[0][fields].to_numpy()
+    return out
+
+
 def assign_school_admin_codes(schools: pd.DataFrame, gpkg_path: Path) -> tuple[pd.DataFrame, pd.DataFrame]:
     boundaries = gpd.read_file(gpkg_path, layer="census_boundary")
     require_columns(boundaries, ["ADM_CD", "census_id", "geometry"], "census_boundary")
@@ -305,6 +333,8 @@ def assign_school_admin_codes(schools: pd.DataFrame, gpkg_path: Path) -> tuple[p
     out["adm_cd"] = out["adm_cd_candidates"].map(
         lambda x: x[0] if len(x) == 1 else pd.NA
     )
+
+    out = correct_jeil_yangji_link(out)
 
     # 경계선 오차로 미매칭된 학교는 동일한 주소 읍·면의 다른 학교가 하나의 ADM_CD로
     # 일관되게 연결된 경우에만 보완한다. 복수 후보는 임의 배정하지 않는다.
