@@ -1,9 +1,43 @@
-"""Stage 4: fix one retained school per cluster, explicitly by education office.
+"""
+04-5. 교육지원청별·군집별 최종 존치학교 확정
 
-Reuses 04-4's ALL_STUDENTS weighted_mean_additional_time_burden_min:
-sum(weight * max(after_time - before_time, 0)) / sum(eligible weight).
-Students with non-increasing time remain in the denominator. No distance-based
-classification, national impact aggregation, or lower/upper-bound selection occurs here.
+이 스크립트가 하는 일
+1) Stage 3의 비중복 군집·적격 통합학교안과 Stage 4-4의 통학부담 결과를 대조한다.
+2) 교육지원청별로 각 군집의 추가 통학시간 부담이 가장 작은 존치학교를 결정한다.
+3) 확정 시나리오의 군집·학교 상태·학생 배정, 검증표와 해시 manifest를 저장한다.
+
+중요한 분석·처리 원칙
+- Stage 3의 CAP28 비중복 군집과 적격 학교안을 그대로 사용하며 다시 선정하지 않는다.
+- 군집에 READY 학교안이 있으면 그 안에서만 비교하고, 없으면
+  PARTIAL_ROUTE_EXCLUSION 학교안을 사용한다. 비교 가능한 학교안이 없으면 중단한다.
+- 주된 지표는 전체 학생 기준(ALL_STUDENTS)의 Stage 4-4 결과인
+  weighted_mean_additional_time_burden_min이다. 계산식은
+  Σ(student_weight × max(통합 후 시간 - 통합 전 시간, 0)) / Σ(분석 가능 학생 가중치)이다.
+  시간 감소·동일 학생도 분석 가능하면 분모에 포함한다.
+- 주된 지표가 같으면 평균 시간 변화, 시간 변화 90분위수, 최대 시간 변화,
+  존치학교 키 순으로 모두 오름차순 비교한다. 보조 지표에는 감소분도 보존한다.
+- 동률은 저장된 수치가 정확히 같은 경우이며, 반올림이나 허용오차를 적용하지 않는다.
+- 군집 간 공동 제약이 없으므로 교육지원청 안에서 군집별로 독립적으로 결정한다.
+- 군집 간 학교 비중복, 학교안별 학생 배정·가중치 보존, 교육지원청 일치와
+  Stage 4-4의 분석 가능 학생 분모·상태를 검증한다. 전국 통학부담 집계는 Stage 5에서 한다.
+
+입력 파일 (프로젝트 루트 기준)
+- data/02_processed/nonoverlap_cluster_selection.csv: 선정된 비중복 군집
+- data/02_processed/final_selected_cluster_options.csv: Stage 3의 적격 통합학교안
+- data/01_raw/elementary_master.csv: 학교·교육지원청 확인
+- data/03_outputs/commute_time_option_summary.csv: 학교안별 선택 지표
+- data/03_outputs/commute_time_demand_option.csv: 학교안별 학생 배정 상세 결과
+
+핵심 산출물 (data/03_outputs)
+- final_integration_scenario.csv: 군집별 확정 존치학교
+- final_integration_schools.csv: 참여학교별 존치·폐교 대상 상태
+- final_integration_demand_assignments.csv: 확정 학교안의 학생 배정
+- final_integration_validation_summary.csv: 범위·학생 가중치 등 검증 결과
+- final_integration_manifest.json: 선정 기준과 입력·출력 파일의 SHA-256
+
+실행 예시 (프로젝트 루트)
+    python scripts/04-5_select_final_retained_schools.py
+    python scripts/04-5_select_final_retained_schools.py --project-root "C:/.../project"
 """
 from __future__ import annotations
 
@@ -37,11 +71,11 @@ def numeric(frame: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
 
 
 def select_retained_school(options: pd.DataFrame) -> pd.Series:
-    """Use the unchanged READY-first policy, then the exact declared ordering.
+    """READY 학교안을 우선한 뒤 정해진 지표 순서대로 존치학교를 선택한다.
 
-    A numerical tolerance is not an ordering equivalence (it is non-transitive).
-    Exact stored numeric equality defines ties, in both sorting and tie counts.
-    FLOAT_TOLERANCE is reserved for formula validation, not score rounding.
+    허용오차 이내라는 관계는 이행적이지 않아 정렬의 동률 기준으로 쓰지 않는다.
+    정렬과 동률 개수 모두 저장된 수치가 정확히 같은 경우를 기준으로 하며,
+    지표를 반올림하거나 FLOAT_TOLERANCE로 보정하지 않는다.
     """
     ready = options.option_analysis_status.eq("READY")
     if ready.any():
@@ -98,8 +132,8 @@ def validate_inputs(clusters: pd.DataFrame, stage3: pd.DataFrame, master: pd.Dat
         raise ValueError("Clusters must contain three distinct schools, with no cross-cluster overlap")
     if master["학교고유ID"].isna().any() or master["학교고유ID"].duplicated().any():
         raise ValueError("School master keys are not unique")
-    # The existing canonical master office name is the office identifier. It must
-    # map to only one provincial education authority, never to homonymous offices.
+    # 학교 마스터의 교육지원청명을 식별자로 사용한다. 같은 이름이 여러 시도교육청에
+    # 걸쳐 있으면 서로 다른 교육지원청을 구별할 수 없으므로 중단한다.
     if master.groupby("교육지원청")["시도교육청"].nunique().gt(1).any():
         raise ValueError("Ambiguous education-office identifier in school master")
     office_by_school = master.set_index("학교고유ID")["교육지원청"]
@@ -160,7 +194,7 @@ def validate_inputs(clusters: pd.DataFrame, stage3: pd.DataFrame, master: pd.Dat
     eligible = parse_bool(detail.commute_analysis_eligible_flag)
     measured = detail.assign(_weight=weights, _eligible_weight=weights.where(eligible, 0), _eligible=eligible).groupby("integration_option_id").agg(
         total=("_weight", "sum"), eligible=("_eligible_weight", "sum"), eligible_rows=("_eligible", "sum"), rows=("_weight", "size"))
-    # Validate the existing 04-4 denominator/coverage, without implementing a second scoring formula.
+    # 선택 점수는 다시 계산하지 않고 04-4의 학생 가중치 분모·분석 가능 비율을 대조한다.
     checks = {"student_weight_total": measured.total, "analysis_eligible_student_weight": measured.eligible,
               "analysis_excluded_student_weight": measured.total - measured.eligible,
               "analysis_student_coverage_rate": measured.eligible / measured.total}
@@ -177,9 +211,8 @@ def validate_inputs(clusters: pd.DataFrame, stage3: pd.DataFrame, master: pd.Dat
 
 def build_scenario(options: pd.DataFrame, membership: pd.DataFrame, detail: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     choices = []
-    # With no shared inter-cluster constraints, the office's additive objective is
-    # minimized by independently minimizing each cluster. Office processing is
-    # explicit; no fictitious budget, facility, or bus constraints are introduced.
+    # 군집 간 공동 제약이 없어 군집별 부담을 최소화하면 교육지원청의 합산 목적도 최소화된다.
+    # 교육지원청별로 나누어 처리하며 예산·시설·통학버스 제약은 추가하지 않는다.
     for office, office_options in options.groupby("school_edu_office", sort=True):
         office_choices = []
         for cluster, candidates in office_options.groupby("final_cluster_id", sort=True):
@@ -221,7 +254,7 @@ def main() -> None:
     outputs = {SCENARIO_FILE: scenario, SCHOOL_FILE: schools, DEMAND_FILE: assignments}
     for filename, frame in outputs.items():
         frame.to_csv(folder / filename, index=False, encoding="utf-8-sig")
-    # Only scope/quality diagnostics: national commute-impact aggregation starts in Stage 5.
+    # 여기서는 분석 범위·품질만 확인하고, 전국 통학부담 집계는 Stage 5에서 수행한다.
     validation = {"selected_cluster_count": len(scenario), "school_count": len(schools),
                   "retained_school_count": int(schools.school_status.eq("RETAINED").sum()),
                   "closed_school_count": int(schools.school_status.eq("CLOSED").sum()),

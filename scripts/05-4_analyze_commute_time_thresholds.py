@@ -1,4 +1,51 @@
-"""Stage 5-4: all-eligible commute-time thresholds, without distance-change filtering."""
+"""
+05-4. 확정 시나리오의 30분 초과 통학시간과 신규 초과·해소 분석
+
+이 스크립트가 하는 일
+1) 전체 분석 가능 학생의 통합 전·후 30분 초과, 신규 초과와 초과 해소를 집계한다.
+2) 전국·지역·존치학교·집계구별 결과와 통합 후 통학시간 분포를 저장하고 검증한다.
+
+중요한 분석 원칙
+- 거리 변화나 학교 이동 여부로 제한하지 않으며 --population 옵션은 제공하지 않는다.
+- 통합 전·후 초과는 각각 before > 30, after > 30이다.
+  신규 초과는 before <= 30이고 after > 30, 초과 해소는 before > 30이고 after <= 30이다.
+  정확히 30분은 초과가 아니며, 반올림이나 허용오차를 적용하지 않는다.
+- 시간은 집계구 대표점에서 학교까지 자동차 직행 편도시간이며 실제 통학버스 시간은 아니다.
+- 학생 가중치와 비율은 전체 분석 가능 학생 또는 해당 지역·학교·집계구의
+  분석 가능 학생을 기준으로 계산한다. 학생 지역은 현재 배정학교 소재지를 사용한다.
+- 존치학교 소재지별 결과는 통합 후 학교 위치로 따로 집계한다. 현재 배정학교
+  지역별 학교·군집 개수는 중복될 수 있어 ID 합집합으로 검증한다.
+  존치학교 소재지별 학교·군집 개수는 합산할 수 있지만 교육지원청 개수는 중복될 수 있다.
+- 학교 상세표는 통합 전 또는 후 초과 학생이 있는 존치학교를 기록한다.
+  집계구 상세표는 신규 초과 학생이 있는 집계구를 기록하며, 비율의 분모에는
+  해당 집계구의 전체 분석 가능 학생 배정을 포함한다.
+- 통합 후 시간 구간은 [0,10), [10,20), [20,30], (30,∞)분이다.
+- 확정 입력의 초과 플래그, 대표점 좌표·학교 정보, 지역·학교·집계구 집계와
+  '통합 후 초과 = 통합 전 초과 + 신규 초과 - 초과 해소'의 학생 가중치를 검증한다.
+- 신규 초과 존치학교 68개교는 참고용 회귀검증 값이다. 불일치는 REVIEW로 기록하며
+  이 값에 맞추어 분석 결과를 변경하거나 실행을 중단하지 않는다.
+
+입력 파일 (data/03_outputs)
+- final_integration_demand_assignments.csv: 확정 학생 배정·통학시간·대표점 좌표·학교 지역
+- final_integration_scenario.csv, final_integration_schools.csv,
+  final_integration_manifest.json: 확정 시나리오·학교 상태와 해시 검증
+
+핵심 산출물 (data/03_outputs/stage5/commute_time_thresholds)
+- thresholds_national.csv: 전국의 네 가지 초과·해소 조건별 결과
+- thresholds_by_current_school_region.csv: 현재 배정학교 지역별 결과
+- thresholds_by_retained_school_location.csv: 존치학교 소재지별 결과
+- retained_school_threshold_details.csv: 존치학교별 초과·해소 학생 가중치와 비율
+- retained_school_current_region_details.csv: 존치학교·현재 배정학교 지역별 상세 결과
+- census_newly_over_30.csv: 신규 초과 학생이 있는 집계구 대표점별 결과
+- post_commute_time_distribution.csv: 통합 후 통학시간 구간별 분포
+- current_school_region_entity_overlaps.csv: 학생 지역 간 학교·군집·교육지원청 중복 소속
+- validation_summary.csv, analysis_manifest.json: 검증 결과와 분석 조건·입력 해시
+  PNG는 생성하지 않으며, --output-dir 지정 시에도 분석명 하위 경로가 추가된다.
+
+실행 예시 (프로젝트 루트)
+    python scripts/05-4_analyze_commute_time_thresholds.py
+    python scripts/05-4_analyze_commute_time_thresholds.py --output-dir "C:/.../stage5-check"
+"""
 from __future__ import annotations
 
 import numpy as np
@@ -68,7 +115,7 @@ def analyze(work: pd.DataFrame, expected_newly_schools: int | None = None) -> di
 
     national_rows, student_region_rows, location_rows, overlaps = [], [], [], []
     total_weight = float(eligible.student_weight.sum())
-    # ALL_ELIGIBLE also exposes potential cross-region membership, even when a threshold has no overlap.
+    # 개별 초과 조건에 중복이 없어도 전체 분석 가능 학생의 지역 간 중복 소속을 확인한다.
     for condition in ("ALL_ELIGIBLE", *CONDITIONS):
         affected = eligible if condition == "ALL_ELIGIBLE" else eligible.loc[masks[condition]]
         if condition != "ALL_ELIGIBLE":

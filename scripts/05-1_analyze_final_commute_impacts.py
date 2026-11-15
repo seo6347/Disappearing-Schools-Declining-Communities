@@ -1,4 +1,31 @@
-"""Stage 5-1: distance-first impacts of the frozen scenario, including unchanged students."""
+"""
+05-1. 확정 시나리오의 전국 통학부담과 거리 변화 집단별 요약
+
+이 스크립트가 하는 일
+- Stage 4의 확정 학생 배정을 읽어 전국 통학거리·통학시간 변화와
+  거리 증가·감소·동일 집단별 학생 가중 통계를 산출하고 집단 분할을 검증한다.
+
+중요한 분석 원칙
+- 전체 분석 가능 학생을 사용하며 학교 이동 여부로 제한하지 않는다.
+  commute_analysis_eligible_flag가 거짓인 학생은 제외 가중치로 별도 기록한다.
+- 거리 변화는 통합 후 - 통합 전이며, 절댓값 1e-9 km 이내는 거리 동일로 분류한다.
+- 집단별 학생 비율의 분모는 전체 분석 가능 학생 가중치이고,
+  집단별 평균·분위수는 해당 집단의 student_weight로 계산한다.
+- 존치학교를 다시 선정하지 않으며 --population 옵션은 제공하지 않는다.
+
+입력 파일 (data/03_outputs)
+- final_integration_demand_assignments.csv: 확정 학생 배정과 통학지표
+- final_integration_scenario.csv, final_integration_schools.csv,
+  final_integration_manifest.json: 확정 시나리오·학교 상태와 해시 검증
+
+핵심 산출물 (data/03_outputs/stage5/commute_impacts)
+- demand_results.csv: 제외 대상을 포함한 배정별 거리·지역 분류
+- national_summary.csv, distance_group_summary.csv: 전국·거리 변화 집단별 요약
+- validation_summary.csv, analysis_manifest.json: 검증 결과와 분석 조건·입력 해시
+
+실행 예시 (프로젝트 루트)
+    python scripts/05-1_analyze_final_commute_impacts.py
+"""
 from __future__ import annotations
 
 import pandas as pd

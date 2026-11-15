@@ -1,4 +1,43 @@
-"""Stage 5-3: distance-first comparisons by current school region and education office."""
+"""
+05-3. 현재 배정학교 지역·교육지원청별 통학부담 비교
+
+이 스크립트가 하는 일
+1) 확정 시나리오의 거리 변화 집단별 전국·지역·교육지원청 통학부담을 계산한다.
+2) 전국 평균을 초과하는 교육지원청 상위 5개를 지표별로 선정하고 비교 그래프를 저장한다.
+
+중요한 분석 원칙
+- 학생의 지역과 교육지원청은 현재 배정학교 소재지를 기준으로 한다.
+  인구감소지역은 DECLINE, 인구감소관심지역·미해당은 NON_DECLINE으로 분류하고,
+  결측·미확인·인식하지 못한 지역 구분은 UNKNOWN으로 별도 집계한다.
+- --population의 기본값은 INCREASED이다. DECREASED, CHANGED, ALL_ELIGIBLE도
+  지원하며, 선택된 거리 증가·감소·동일 집단별로 독립 분석한다.
+- 경로 분석 제외 학생은 포함하지 않는다. 평균은 Σ(값 × student_weight)
+  / Σ(student_weight)이며, 지역별 학생 비율의 분모는 해당 거리 집단의 학생 가중치다.
+- 상위 5개는 거리 변화와 시간 변화 각각의 학생 가중평균이 해당 집단의 전국 평균을
+  엄격히 초과하는 교육지원청에서 선정한다. 학생 가중치 100 이상·고유 집계구 10개
+  이상이 기본 조건이며 --min-estimated-students, --min-census-points로 조정한다.
+- 순위는 가중평균 내림차순, 동률은 교육지원청명 오름차순이다.
+  조건을 충족하는 교육지원청이 적으면 5개 미만을 기록한다.
+- 지역별 학교·군집·교육지원청 고유 개수는 지역 간 중복될 수 있어 단순 합산하지 않는다.
+
+입력 파일 (data/03_outputs)
+- final_integration_demand_assignments.csv: 확정 학생 배정과 통학지표·학교 지역
+- final_integration_scenario.csv, final_integration_schools.csv,
+  final_integration_manifest.json: 확정 시나리오·학교 상태와 해시 검증
+
+핵심 산출물 (data/03_outputs/stage5/regional_distance_burden/<population>)
+- national_average.csv, education_office_metrics.csv: 집단별 전국·교육지원청 통계
+- population_decline_metrics.csv: 인구감소지역·비인구감소지역·미확인 비교
+- population_decline_source_metrics.csv: 원래 인구감소지역 구분별 통계
+- top5_above_national.csv: 거리·시간 지표별 전국 평균 초과 교육지원청 순위
+- {집단}_top5_{지표}.png, {집단}_population_decline_{지표}.png
+- validation_summary.csv, analysis_manifest.json: 검증 결과와 분석 조건·입력 해시
+  --output-dir 지정 시에도 분석명과 모집단 하위 경로가 추가된다.
+
+실행 예시 (프로젝트 루트)
+    python scripts/05-3_analyze_regional_distance_burden.py
+    python scripts/05-3_analyze_regional_distance_burden.py --population DECREASED
+"""
 from __future__ import annotations
 
 import pandas as pd

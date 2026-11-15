@@ -1,4 +1,30 @@
-"""Shared, read-only interpretation of the frozen Stage 4 commute assignments."""
+"""
+Stage 5 확정 통학 배정의 분석 준비·학생 가중 통계·출력 공통 모듈
+
+제공하는 기능
+- final_scenario_io로 Stage 4 확정 결과와 해시를 확인하고, 배정 식별자·학생 가중치·
+  통학지표의 유효성과 통합 후 - 통합 전 변화량의 일치를 검증한다.
+- 분석 가능 학생을 거리 변화로 분류한다. 1e-9 km 초과는 INCREASED,
+  -1e-9 km 미만은 DECREASED, 그 사이는 UNCHANGED이며 경로 분석 제외는 EXCLUDED다.
+- 학생 지역은 현재 배정학교, 존치학교 소재지는 통합 후 학교의 인구감소지역 구분을 쓴다.
+  인구감소지역은 DECLINE, 인구감소관심지역·미해당은 NON_DECLINE,
+  결측·미확인·인식하지 못한 구분은 UNKNOWN으로 처리한다.
+- INCREASED, DECREASED, CHANGED, ALL_ELIGIBLE 분석 집단을 제공한다.
+  CHANGED와 ALL_ELIGIBLE도 거리 변화 집단별로 나누어 통계를 계산하도록 한다.
+- student_weight에 의한 평균·누적 가중치 기반 분위수·비율과 집단별 보존 검증을 제공한다.
+  분모가 0인 비율과 유효한 가중치가 없는 평균·분위수는 결측값이다.
+- 출력은 기본적으로 data/03_outputs/stage5/<분석명>에 두고, 모집단 옵션이 있는
+  분석은 <population>을 추가한다. --output-dir도 이 하위 경로를 유지한다.
+- OutputBundle은 CSV·PNG·manifest를 임시 디렉터리에 준비한 뒤 정상 종료 시
+  선택 출력 경로에 파일별로 반영한다. 기존 결과 교체에는 --overwrite가 필요하다.
+- manifest에 확정 입력 해시, 분석 집단·분모·지역 기준, CSV 스키마와 파일 목록을 기록한다.
+- 비대화형 그래프 생성과 지정 한글 폰트 또는 맑은 고딕·Noto 한글 폰트 탐색을 지원한다.
+
+사용 관계
+- 05-1~05-4가 이 모듈을 사용하며, 공통 CLI와 통계·검증·저장 기능을 공유한다.
+- 확정 입력 파일은 읽기 전용으로 사용하고 학교 선정은 수행하지 않는다.
+  분석별 결과 저장은 각 스크립트가 호출하며 이 모듈은 직접 실행하지 않는다.
+"""
 from __future__ import annotations
 
 import argparse
@@ -180,7 +206,7 @@ def output_path(args, analysis: str) -> Path:
 
 
 class OutputBundle(AbstractContextManager):
-    """Stage every managed file before replacing anything in the selected namespace."""
+    """선택한 출력 경로의 파일을 교체하기 전에 모든 산출물을 임시 디렉터리에 준비한다."""
 
     def __init__(self, destination: Path, overwrite: bool):
         self.destination = destination
@@ -233,7 +259,7 @@ class OutputBundle(AbstractContextManager):
         try:
             if exc_type is None:
                 self.destination.mkdir(parents=True, exist_ok=True)
-                # Never unlink pre-existing results before input validation and rendering finish.
+                # 입력 검증과 그래프 생성이 끝나기 전에는 기존 결과를 삭제하지 않는다.
                 for path in sorted(self.path.iterdir(), key=lambda p: p.name == "analysis_manifest.json"):
                     path.replace(self.destination / path.name)
         finally:
