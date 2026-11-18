@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 610" role="img" aria-labelledby="method-s4-title"><title id="method-s4-title">학교가 겹치지 않는 군집 선정</title>
+<g font-family="sans-serif" font-size="23" fill="#282828">
+<g data-appear="4-1" data-until="4-2" data-return="4-3">
+<g data-s4-map="">
+<path d="M145 90 C90 85 72 175 85 260 C95 315 72 390 86 455 C115 500 168 468 218 445 C264 420 326 420 335 354 C360 320 306 287 260 265 C232 243 248 191 220 150 C197 119 166 91 145 90 Z" fill="none" stroke="#282828" stroke-width="3.5"/>
+<g fill="none" stroke-width="16" stroke-linecap="round"><path data-s4-until="0.75" d="M132 170 V420" stroke="#eddf65"/><path data-s4-until="0.75" d="M149 170 V280 L300 350" stroke="#85ded0"/><path d="M149 280 V420 L300 350 Z" stroke="#91dfac"/></g>
+<g fill="#f3f0e6" stroke="#282828" stroke-width="3"><circle cx="140" cy="170" r="22"/><circle cx="140" cy="285" r="22"/><circle cx="140" cy="420" r="22"/><circle cx="300" cy="350" r="22"/></g><g text-anchor="middle" font-weight="700"><text x="140" y="179">A</text><text x="140" y="294">B</text><text x="140" y="429">C</text><text x="300" y="359">D</text></g>
+<circle data-appear="4-1" data-until="4-2" cx="140" cy="285" r="32" fill="none" stroke="#ef5941" stroke-width="3"/>
+</g>
+<g transform="translate(365 170)"><text data-appear="4-1" data-until="4-3" x="0" y="-100" font-size="20" data-s4-fit-width="325">〈가능한 3개교 군집 후보〉</text>
+<rect data-s4-highlight="method-s4-K1" x="100" y="-30" width="90" height="56" rx="4" fill="#eddf6580"/><rect data-s4-highlight="method-s4-K2" x="100" y="80" width="90" height="56" rx="4" fill="#85ded080"/><rect data-s4-highlight="method-s4-K3" x="100" y="190" width="90" height="56" rx="4" fill="#91dfac80"/>
+<rect data-s4-from="0.75" x="-8" y="182" width="336" height="70" rx="8" fill="#CDE36A" stroke="#415529" stroke-width="3"/>
+<text x="0" y="7">K1 =</text><text id="method-s4-K1" x="100" y="7">A-B-C</text><text x="0" y="117">K2 =</text><text id="method-s4-K2" x="100" y="117">A-B-D</text><text x="0" y="227">K3 =</text><text id="method-s4-K3" x="100" y="227">B-C-D</text>
+<text data-s4-from="0.25" x="245" y="-60" font-size="20" text-anchor="middle" data-s4-fit-width="170">접근시간 점수 합</text>
+<g data-s4-from="0.25" font-weight="700" text-anchor="middle"><text x="245" y="7" data-bind="score-K1">21분</text><text x="245" y="117" data-bind="score-K2">25분</text><text x="245" y="227" fill="#415529" data-bind="score-K3">17분</text></g>
+<g data-s4-from="0.5" font-weight="700" font-size="32" text-anchor="middle"><text x="305" y="9" fill="#ef5941">×</text><text x="305" y="119" fill="#ef5941">×</text><text x="305" y="229" fill="#415529">✓</text></g>
+<g data-s4-from="0.75" font-weight="700"><rect x="0" y="263" width="325" height="60" rx="8" fill="#415529"/><text x="20" y="302" font-size="28" fill="#F3F0E6">최종 군집: K3</text></g></g>
+</g>
+<g data-appear="4-2" data-until="4-3"><text x="350" y="35" text-anchor="middle" font-size="23">〈최종 비중복 군집 선택 기준〉</text><g fill="#eae7dc" stroke="#282828" stroke-width="2"><rect x="20" y="65" width="660" height="125" rx="7"/><rect x="20" y="245" width="660" height="125" rx="7"/><rect x="20" y="425" width="660" height="125" rx="7"/></g><g font-weight="700"><text x="45" y="110">① 군집 수 최대화</text><text x="45" y="290">② 접근시간 점수 합 최소화</text><text x="45" y="470">③ 후보 ID 순위로 최종 결정</text></g><g font-size="20"><text x="45" y="146" data-s4-fit-width="610">더 많은 지역을 묶는다</text><text x="45" y="326" data-s4-fit-width="610">군집 수가 같으면 묶인 학교들이 더 가까운 경우가 선정</text><text x="45" y="506" data-s4-fit-width="610">그래도 동률이면 미리 부여된 ID 순위로 결정</text></g><path data-draw="4-2" d="M350 200 V226 M338 214 L350 226 L362 214 M350 380 V406 M338 394 L350 406 L362 394" fill="none" stroke="#282828" stroke-width="3"/></g>
+</g></svg>

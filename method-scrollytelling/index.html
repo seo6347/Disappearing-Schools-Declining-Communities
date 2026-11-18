@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>작은학교 통폐합 분석 과정</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="method.css">
+  <style>
+    /* Preview shell only. These styles are not part of the handoff fragment. */
+    html { background: #f3f0e6; color: #282828; font-family: "Noto Sans KR", "Malgun Gothic", sans-serif; }
+    body { margin: 0; }
+    .preview-shell { min-height: 100svh; display: grid; place-items: center; }
+    .preview-open { border: 1px solid #415529; border-radius: 3px; padding: 17px 28px; color: #415529; background: transparent; font: 700 20px/1.5 "Noto Sans KR", "Malgun Gothic", sans-serif; cursor: pointer; }
+    .preview-open:hover { background: #eae7dc; }
+    .preview-error { color: #8a3625; max-width: 560px; padding: 24px; }
+  </style>
+  <script src="vendor/gsap.min.js" defer></script>
+  <script src="vendor/ScrollTrigger.min.js" defer></script>
+  <script src="method.js" defer></script>
+  <script src="preview.js" defer></script>
+</head>
+<body>
+  <main class="preview-shell"><button type="button" class="preview-open" disabled>분석 과정 살펴보기</button></main>
+  <div id="preview-mount"></div>
+</body>
+</html>

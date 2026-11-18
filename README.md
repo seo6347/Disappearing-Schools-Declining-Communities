@@ -12,6 +12,16 @@ SBS 데이터사이언스&저널리즘 아카데미 5기 최종 프로젝트에�
 
 [분석 데이터 다운로드](https://drive.google.com/file/d/1gI2mbYeZBlatgF54blwLDYTPECRAkfMG/view?usp=sharing) · [분석 코드 살펴보기](scripts/)
 
+### 분석 과정 스크롤리텔링
+
+집계구 기반 학생분포 추정부터 학교 간 연결망 구성, 3개교 통합 후보 생성, 수용력·도로 접근성 검증, 비중복 군집 최적화, 최종 존치학교 선정까지의 과정을 인터랙티브 스크롤리텔링으로 구현했습니다.
+
+설명용 가상 사례를 통해 분석 과정에서 학교와 학생분포가 어떻게 연결되고, 어떤 기준으로 통합 군집과 존치학교가 결정되는지 단계적으로 확인할 수 있습니다.
+
+- 주요 기술: HTML, CSS, JavaScript, SVG, GSAP ScrollTrigger
+- 구현 코드: `method-scrollytelling/`
+- 실행 데모: GitHub Pages 배포 후 추가 예정
+
 ## **팀 소개 — DIVA**
 
 SBS 데이터사이언스&저널리즘 아카데미 5기에서 함께 프로젝트를 진행한 팀입니다.

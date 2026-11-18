@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 610" role="img" aria-labelledby="method-svg-title method-svg-desc">
+  <title id="method-svg-title">A초 통학구역과 집계구</title>
+  <desc id="method-svg-desc">하단이 안으로 들어간 불규칙한 노란 통학구역. A초는 영역의 왼쪽 위쪽에 있습니다. 초록 점선 집계구 경계는 통학구역 안팎을 가로지릅니다. 원본 손그림 1쪽을 벡터로 재구성한 가상 예시입니다.</desc>
+  <defs>
+    <pattern id="method-red-hatch" width="15" height="15" patternUnits="userSpaceOnUse" patternTransform="rotate(40)"><path d="M0 0 V15" stroke="#ef5941" stroke-width="3"/></pattern>
+    <clipPath id="method-k-clip"><use href="#method-catchment-shape"/></clipPath>
+    <marker id="method-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1 L8 5 L1 9" fill="none" stroke="#ef5941" stroke-width="1.5"/></marker>
+    <path id="method-catchment-shape" d="M285 142 C260 140 239 153 207 164 C168 179 137 209 125 248 C112 285 115 322 134 348 C151 372 194 385 224 406 C249 422 259 438 255 460 C251 479 251 491 265 489 C291 481 323 462 347 447 C375 429 391 407 398 381 C406 351 403 324 405 294 C409 252 405 220 392 199 C379 178 358 171 340 159 C325 150 305 143 285 142 Z"/>
+    <path id="method-census-north" d="M176 219 C173 200 170 176 164 157 C162 143 158 127 160 111 C158 93 155 72 164 53 C170 34 184 22 200 28 C208 39 219 29 228 43 C242 62 249 82 250 103 C249 118 258 131 256 145 C249 164 239 177 240 194 C245 209 248 223 243 241"/>
+    <path id="method-census-west" d="M185 174 C163 175 146 187 131 197 C118 215 111 228 112 249 C106 266 111 286 109 300 C119 316 139 319 151 328 C167 339 176 328 188 317 C201 305 204 288 210 279"/>
+    <path id="method-census-centre" d="M176 219 C180 230 184 240 191 249 C204 250 219 249 232 247 C242 247 250 257 245 273 C244 288 253 301 261 314"/>
+    <path id="method-census-east" d="M256 145 C278 140 304 146 326 145 C346 145 360 154 376 162 C393 164 408 181 417 197 C428 211 427 230 423 247 C421 268 414 278 403 291 C387 303 370 307 357 315 C379 322 398 326 420 335"/>
+    <path id="method-census-cross" d="M188 317 C199 328 215 340 222 353 C239 343 251 327 261 314 C283 310 305 310 322 316 C339 320 347 312 357 315"/>
+    <path id="method-census-southwest" d="M109 300 C104 324 102 347 113 368 C122 388 141 401 161 404 C179 407 196 397 213 402 C222 389 221 370 222 353"/>
+    <path id="method-census-south" d="M213 402 C215 425 218 447 230 463 C242 480 250 500 267 512 C284 527 302 535 323 532 C347 534 366 523 383 515 C408 499 426 482 433 459 C442 440 444 418 438 395 C435 375 435 354 420 335"/>
+    <mask id="method-outline-reveal" maskUnits="userSpaceOnUse" x="70" y="0" width="420" height="550">
+      <use href="#method-catchment-shape" fill="none" stroke="white" stroke-width="9" pathLength="1" data-method-outline-mask=""/>
+    </mask>
+    <mask id="method-census-reveal" maskUnits="userSpaceOnUse" x="70" y="0" width="420" height="550">
+      <g fill="none" stroke="white" stroke-width="9" stroke-linecap="round">
+        <use href="#method-census-north" data-method-reveal="0"/>
+        <use href="#method-census-west" data-method-reveal="1"/>
+        <use href="#method-census-centre" data-method-reveal="2"/>
+        <use href="#method-census-east" data-method-reveal="3"/>
+        <use href="#method-census-cross" data-method-reveal="4"/>
+        <use href="#method-census-southwest" data-method-reveal="5"/>
+        <use href="#method-census-south" data-method-reveal="6"/>
+      </g>
+    </mask>
+  </defs>
+  <g id="method-joint" data-method-new="joint" opacity="0">
+    <path d="M392 199 C410 155 446 145 468 174 C504 218 507 275 509 325 C513 400 485 460 438 499 C401 530 370 529 364 480 L347 447 C375 429 391 407 398 381 C406 351 403 324 405 294 C409 252 405 220 392 199 Z" fill="#F4BCC1" stroke="#282828" stroke-width="3.5"/>
+    <path d="M518 297 L548 294 L550 326 L519 329 Z" fill="#f3f0e6" stroke="#282828" stroke-width="3"/>
+    <text x="534" y="320" text-anchor="middle" font-size="23" font-weight="700" fill="#282828">B</text>
+    <text x="528" y="285" font-family="sans-serif" font-size="20" font-weight="700" fill="#282828">B초</text>
+  </g>
+  <g id="method-catchment" data-method-layer="catchment">
+    <use href="#method-catchment-shape" fill="#FBF7AE" data-method-fill=""/>
+    <use href="#method-catchment-shape" fill="none" stroke="#282828" stroke-width="3.8" stroke-linecap="round" stroke-linejoin="round" mask="url(#method-outline-reveal)"/>
+  </g>
+  <g id="method-census-boundaries" data-method-layer="census" mask="url(#method-census-reveal)" fill="none" stroke="#40AD62" stroke-width="2.5" stroke-dasharray="8 13" stroke-linecap="round" stroke-linejoin="round">
+    <use href="#method-census-north"/>
+    <use href="#method-census-west"/>
+    <use href="#method-census-centre"/>
+    <use href="#method-census-east"/>
+    <use href="#method-census-cross"/>
+    <use href="#method-census-southwest"/>
+    <use href="#method-census-south"/>
+  </g>
+  <g id="method-k-highlight" data-method-new="k" opacity="0" clip-path="url(#method-k-clip)">
+    <path d="M256 145 C278 140 304 146 326 145 C346 145 360 154 376 162 C415 170 435 220 423 247 C421 268 414 278 403 291 C387 303 370 307 357 315 C339 320 347 312 322 316 C305 310 283 310 261 314 C250 300 244 288 245 273 C250 257 242 247 232 247 L243 241 C248 223 245 209 240 194 C239 177 249 164 256 145 Z" fill="url(#method-red-hatch)"/>
+    <text x="325" y="245" text-anchor="middle" font-size="22" font-family="sans-serif" fill="#bf402f">K집계구</text>
+  </g>
+  <g id="method-representatives" data-method-new="points" opacity="0" fill="#50ca74">
+    <circle cx="160" cy="260" r="5"/><circle cx="307" cy="225" r="5"/><circle cx="151" cy="350" r="5"/><circle cx="320" cy="420" r="5"/><circle cx="220" cy="285" r="5"/><circle cx="200" cy="80" r="5"/>
+  </g>
+  <g id="method-allocation-lines" data-method-new="links" opacity="0" fill="none" stroke="#ef5941" stroke-width="3" marker-end="url(#method-arrow)">
+    <path d="M166 260 Q190 255 208 247"/><path d="M301 225 Q272 218 246 240"/><path d="M155 345 Q165 295 211 255"/><path d="M318 414 Q315 310 244 257"/><path d="M220 280 L224 261"/>
+  </g>
+  <g id="method-outside" data-method-new="outside" opacity="0">
+    <path d="M176 219 C173 200 170 176 164 157 C158 125 150 85 164 53 C175 21 209 20 228 43 C248 73 250 103 256 145 C240 180 240 209 243 241 Z" fill="url(#method-red-hatch)"/>
+    <circle cx="200" cy="80" r="15" fill="none" stroke="#ef5941" stroke-width="3"/>
+  </g>
+  <g id="method-joint-allocation" data-method-new="split" opacity="0" font-family="sans-serif" font-size="20" font-weight="700" fill="#ef5941">
+    <path id="method-joint-census-boundary" d="M435 273 C454 262 475 267 484 284 C492 302 487 323 474 333 C459 342 441 335 435 324 C428 311 427 287 435 273 Z" fill="none" stroke="#40AD62" stroke-width="2.5" stroke-dasharray="8 13" stroke-linecap="round"/>
+    <circle cx="448" cy="321" r="5" fill="#50ca74"/>
+    <g fill="none" stroke="#ef5941" stroke-width="3" marker-end="url(#method-arrow)"><path d="M444 317 Q365 254 249 245"/><path d="M452 319 Q483 297 516 310"/></g>
+    <text x="423" y="358" data-method-before="">100명</text><text x="334" y="275" data-method-before="">50명</text><text x="479" y="278" data-method-before="">50명</text>
+    <g data-method-new="calibrated" opacity="0"><path d="M333 262 L379 276 M478 263 L523 278 M421 343 L478 359" stroke="#282828" stroke-width="2"/><text x="330" y="303" fill="#415529">20명</text><text x="475" y="250" fill="#415529">80명</text><text x="423" y="390" fill="#415529">80명</text></g>
+    <g id="method-joint-legend" font-family="Noto Sans KR, sans-serif" font-size="20" font-weight="400" fill="#282828"><path d="M271 596 H306" stroke="#F4BCC1" stroke-width="17" stroke-linecap="round"/><text x="328" y="603">A·B초 공동통학구역</text></g>
+  </g>
+  <g id="method-school-a" data-method-layer="school">
+    <path d="M209 230 L242 226 L244 259 L210 262 Z" fill="#F3F0E6" stroke="#282828" stroke-width="3.6" stroke-linejoin="round"/>
+    <text x="227" y="252" text-anchor="middle" fill="#282828" font-family="sans-serif" font-size="24" font-weight="800">A</text>
+    <text x="197" y="221" text-anchor="end" fill="#282828" font-family="Noto Sans KR, sans-serif" font-size="20" font-weight="700">A초</text>
+  </g>
+  <g id="method-legend" font-family="Noto Sans KR, sans-serif" font-size="20" fill="#282828">
+    <g id="method-point-legend" data-method-new="point-legend" opacity="0"><circle cx="78" cy="596" r="5" fill="#50ca74"/><text x="118" y="603">집계구 대표점</text></g>
+    <g data-method-layer="catchment-legend">
+      <path d="M61 564 C72 560 86 562 96 563" stroke="#FBF7AE" stroke-width="17" stroke-linecap="round" fill="none"/>
+      <text x="118" y="571">A초 통학구역</text>
+    </g>
+    <g data-method-layer="census-legend">
+      <path d="M307 564 L352 564" stroke="#40AD62" stroke-width="2.5" stroke-dasharray="8 9" stroke-linecap="round" fill="none"/>
+      <text x="367" y="571">집계구 경계</text>
+    </g>
+  </g>
+</svg>

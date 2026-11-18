@@ -1,0 +1,531 @@
+{
+  "metadata": {
+    "title": "분석 과정 설명 탭용 가상 예시 데이터",
+    "version": "2.0",
+    "mock_only": true,
+    "note": "실제 학교·집계구·경로가 아닌 교육용 고정 fixture. 거리·시간·선정 결과는 실제 정책 분석 결과와 무관.",
+    "consistency_note": "K3 BCD selected; D has 3 classrooms (84 seats). Commute times below are synthetic constructed inputs, not values read from the drawing or measured routes; calibrated to weighted burdens B=8 and D=4. School-specific weights and national results preserved."
+  },
+  "global_rules": {
+    "same_education_office": true,
+    "school_pair_max_straight_distance_km": 10,
+    "capacity_students_per_classroom": 28,
+    "candidate_induced_graph_connected": true,
+    "allow_candidate_overlap_before_optimization": true,
+    "stage3_objectives": [
+      "max_cluster_count",
+      "min_sum_school_access_score",
+      "min_candidate_id_rank_sum"
+    ],
+    "stage4_metric": "weighted_mean_additional_time_burden_min"
+  },
+  "schools": [
+    {
+      "id": "A",
+      "name": "A초",
+      "students": 28,
+      "rooms": 3,
+      "capacity": 84,
+      "x": 0.16,
+      "y": 0.22
+    },
+    {
+      "id": "B",
+      "name": "B초",
+      "students": 22,
+      "rooms": 3,
+      "capacity": 84,
+      "x": 0.53,
+      "y": 0.39
+    },
+    {
+      "id": "C",
+      "name": "C초",
+      "students": 18,
+      "rooms": 2,
+      "capacity": 56,
+      "x": 0.53,
+      "y": 0.75
+    },
+    {
+      "id": "D",
+      "name": "D초",
+      "students": 25,
+      "rooms": 3,
+      "capacity": 84,
+      "x": 0.76,
+      "y": 0.55
+    }
+  ],
+  "census_zones": [
+    {
+      "id": "G1",
+      "age_5_9": 10,
+      "age_10_14": 10,
+      "schools": [
+        "A"
+      ],
+      "estimated_children": 12.0,
+      "initial_allocation_per_school": 12.0
+    },
+    {
+      "id": "G2",
+      "age_5_9": 15,
+      "age_10_14": 15,
+      "schools": [
+        "A",
+        "B"
+      ],
+      "estimated_children": 18.0,
+      "initial_allocation_per_school": 9.0
+    },
+    {
+      "id": "G3",
+      "age_5_9": 10,
+      "age_10_14": 10,
+      "schools": [
+        "B"
+      ],
+      "estimated_children": 12.0,
+      "initial_allocation_per_school": 12.0
+    },
+    {
+      "id": "G4",
+      "age_5_9": 10,
+      "age_10_14": 15,
+      "schools": [
+        "C"
+      ],
+      "estimated_children": 15.0,
+      "initial_allocation_per_school": 15.0
+    },
+    {
+      "id": "G5",
+      "age_5_9": 15,
+      "age_10_14": 15,
+      "schools": [
+        "D"
+      ],
+      "estimated_children": 18.0,
+      "initial_allocation_per_school": 18.0
+    },
+    {
+      "id": "G6",
+      "age_5_9": 10,
+      "age_10_14": 15,
+      "schools": [
+        "C",
+        "D"
+      ],
+      "estimated_children": 15.0,
+      "initial_allocation_per_school": 7.5
+    }
+  ],
+  "calibration_initial_totals": {
+    "A": 21.0,
+    "B": 21.0,
+    "C": 22.5,
+    "D": 25.5
+  },
+  "calibration_factors": {
+    "A": 1.3333333333333333,
+    "B": 1.0476190476190477,
+    "C": 0.8,
+    "D": 0.9803921568627451
+  },
+  "school_allocations": [
+    {
+      "zone_id": "G1",
+      "school_id": "A",
+      "initial_weight": 12.0,
+      "factor": 1.3333333333333333,
+      "calibrated_weight": 16.0
+    },
+    {
+      "zone_id": "G2",
+      "school_id": "A",
+      "initial_weight": 9.0,
+      "factor": 1.3333333333333333,
+      "calibrated_weight": 12.0
+    },
+    {
+      "zone_id": "G2",
+      "school_id": "B",
+      "initial_weight": 9.0,
+      "factor": 1.0476190476190477,
+      "calibrated_weight": 9.428571428571429
+    },
+    {
+      "zone_id": "G3",
+      "school_id": "B",
+      "initial_weight": 12.0,
+      "factor": 1.0476190476190477,
+      "calibrated_weight": 12.571428571428573
+    },
+    {
+      "zone_id": "G4",
+      "school_id": "C",
+      "initial_weight": 15.0,
+      "factor": 0.8,
+      "calibrated_weight": 12.0
+    },
+    {
+      "zone_id": "G5",
+      "school_id": "D",
+      "initial_weight": 18.0,
+      "factor": 0.9803921568627451,
+      "calibrated_weight": 17.64705882352941
+    },
+    {
+      "zone_id": "G6",
+      "school_id": "C",
+      "initial_weight": 7.5,
+      "factor": 0.8,
+      "calibrated_weight": 6.0
+    },
+    {
+      "zone_id": "G6",
+      "school_id": "D",
+      "initial_weight": 7.5,
+      "factor": 0.9803921568627451,
+      "calibrated_weight": 7.352941176470588
+    }
+  ],
+  "school_pairs": [
+    {
+      "from": "A",
+      "to": "B",
+      "distance_km": 9.0,
+      "eligible_10km": true
+    },
+    {
+      "from": "A",
+      "to": "C",
+      "distance_km": 14.0,
+      "eligible_10km": false
+    },
+    {
+      "from": "A",
+      "to": "D",
+      "distance_km": 12.0,
+      "eligible_10km": false
+    },
+    {
+      "from": "B",
+      "to": "C",
+      "distance_km": 8.0,
+      "eligible_10km": true
+    },
+    {
+      "from": "B",
+      "to": "D",
+      "distance_km": 5.0,
+      "eligible_10km": true
+    },
+    {
+      "from": "C",
+      "to": "D",
+      "distance_km": 6.0,
+      "eligible_10km": true
+    }
+  ],
+  "candidates": [
+    {
+      "id": "K1",
+      "schools": [
+        "A",
+        "B",
+        "C"
+      ],
+      "shape": "CHAIN",
+      "options": [
+        {
+          "retained": "A",
+          "capacity": 84,
+          "students_total": 68,
+          "capacity_ok": true,
+          "max_road_duration_min": 25,
+          "has_ferry": true,
+          "road_ok": false,
+          "eligible": false,
+          "reason": "FERRY"
+        },
+        {
+          "retained": "B",
+          "capacity": 84,
+          "students_total": 68,
+          "capacity_ok": true,
+          "max_road_duration_min": 21,
+          "has_ferry": false,
+          "road_ok": true,
+          "eligible": true,
+          "reason": "ELIGIBLE"
+        },
+        {
+          "retained": "C",
+          "capacity": 56,
+          "students_total": 68,
+          "capacity_ok": false,
+          "max_road_duration_min": null,
+          "has_ferry": null,
+          "road_ok": null,
+          "eligible": false,
+          "reason": "CAPACITY_FAIL"
+        }
+      ],
+      "eligible": true,
+      "access_score_min": 21
+    },
+    {
+      "id": "K2",
+      "schools": [
+        "A",
+        "B",
+        "D"
+      ],
+      "shape": "CHAIN",
+      "options": [
+        {
+          "retained": "A",
+          "capacity": 84,
+          "students_total": 75,
+          "capacity_ok": true,
+          "max_road_duration_min": 30,
+          "has_ferry": false,
+          "road_ok": true,
+          "eligible": true,
+          "reason": "ELIGIBLE"
+        },
+        {
+          "retained": "B",
+          "capacity": 84,
+          "students_total": 75,
+          "capacity_ok": true,
+          "max_road_duration_min": 25,
+          "has_ferry": false,
+          "road_ok": true,
+          "eligible": true,
+          "reason": "ELIGIBLE"
+        },
+        {
+          "retained": "D",
+          "capacity": 84,
+          "students_total": 75,
+          "capacity_ok": true,
+          "max_road_duration_min": 27,
+          "has_ferry": false,
+          "road_ok": true,
+          "eligible": true,
+          "reason": "ELIGIBLE"
+        }
+      ],
+      "eligible": true,
+      "access_score_min": 25
+    },
+    {
+      "id": "K3",
+      "schools": [
+        "B",
+        "C",
+        "D"
+      ],
+      "shape": "TRIANGLE",
+      "options": [
+        {
+          "retained": "B",
+          "capacity": 84,
+          "students_total": 65,
+          "capacity_ok": true,
+          "max_road_duration_min": 25,
+          "has_ferry": false,
+          "road_ok": true,
+          "eligible": true,
+          "reason": "ELIGIBLE"
+        },
+        {
+          "retained": "C",
+          "capacity": 56,
+          "students_total": 65,
+          "capacity_ok": false,
+          "max_road_duration_min": null,
+          "has_ferry": null,
+          "road_ok": null,
+          "eligible": false,
+          "reason": "CAPACITY_FAIL"
+        },
+        {
+          "retained": "D",
+          "capacity": 84,
+          "students_total": 65,
+          "capacity_ok": true,
+          "max_road_duration_min": 17,
+          "has_ferry": false,
+          "road_ok": true,
+          "eligible": true,
+          "reason": "ELIGIBLE"
+        }
+      ],
+      "eligible": true,
+      "access_score_min": 17
+    }
+  ],
+  "school_road_legs": [
+    {
+      "from": "B",
+      "to": "A",
+      "duration_min": 25,
+      "has_ferry": false
+    },
+    {
+      "from": "C",
+      "to": "A",
+      "duration_min": 18,
+      "has_ferry": true
+    },
+    {
+      "from": "D",
+      "to": "A",
+      "duration_min": 30,
+      "has_ferry": false
+    },
+    {
+      "from": "A",
+      "to": "B",
+      "duration_min": 21,
+      "has_ferry": false
+    },
+    {
+      "from": "C",
+      "to": "B",
+      "duration_min": 21,
+      "has_ferry": false
+    },
+    {
+      "from": "D",
+      "to": "B",
+      "duration_min": 25,
+      "has_ferry": false
+    },
+    {
+      "from": "A",
+      "to": "D",
+      "duration_min": 27,
+      "has_ferry": false
+    },
+    {
+      "from": "B",
+      "to": "D",
+      "duration_min": 17,
+      "has_ferry": false
+    },
+    {
+      "from": "C",
+      "to": "D",
+      "duration_min": 15,
+      "has_ferry": false
+    }
+  ],
+  "stage3_selected_candidate_id": "K3",
+  "stage3_selected_schools": [
+    "B",
+    "C",
+    "D"
+  ],
+  "stage4_commute_rows": [
+    {
+      "zone_id": "G2",
+      "current_school": "B",
+      "student_weight": 9.428571428571429,
+      "before_min": 10,
+      "after_B_min": 10,
+      "additional_B_min": 0,
+      "after_D_min": 17.470588235294116,
+      "additional_D_min": 7.470588235294116
+    },
+    {
+      "zone_id": "G3",
+      "current_school": "B",
+      "student_weight": 12.571428571428573,
+      "before_min": 6,
+      "after_B_min": 6,
+      "additional_B_min": 0,
+      "after_D_min": 13.470588235294118,
+      "additional_D_min": 7.470588235294118
+    },
+    {
+      "zone_id": "G4",
+      "current_school": "C",
+      "student_weight": 12.0,
+      "before_min": 10,
+      "after_B_min": 23.283730158730158,
+      "additional_B_min": 13.283730158730158,
+      "after_D_min": 17.470588235294116,
+      "additional_D_min": 7.470588235294116
+    },
+    {
+      "zone_id": "G5",
+      "current_school": "D",
+      "student_weight": 17.64705882352941,
+      "before_min": 12,
+      "after_B_min": 25.283730158730158,
+      "additional_B_min": 13.283730158730158,
+      "after_D_min": 12,
+      "additional_D_min": 0
+    },
+    {
+      "zone_id": "G6",
+      "current_school": "C",
+      "student_weight": 6.0,
+      "before_min": 10,
+      "after_B_min": 20,
+      "additional_B_min": 10,
+      "after_D_min": 11,
+      "additional_D_min": 1
+    },
+    {
+      "zone_id": "G6",
+      "current_school": "D",
+      "student_weight": 7.352941176470588,
+      "before_min": 11,
+      "after_B_min": 20,
+      "additional_B_min": 9,
+      "after_D_min": 11,
+      "additional_D_min": 0
+    }
+  ],
+  "stage4_mean_additional_min": {
+    "retained_B": 8.0,
+    "retained_D": 4.0
+  },
+  "stage4_final_retained_school": "D",
+  "national_actual_results": {
+    "master_school_count": 6302,
+    "initial_eligible_public_small_main": 2513,
+    "valid_student_distribution_schools": 2503,
+    "triple_candidate_covered_schools": 2382,
+    "road_capacity_feasible_covered_schools": 2366,
+    "three_school_triple_count_before_capacity_and_road": 48273,
+    "final_clusters": 720,
+    "final_participating_schools": 2160,
+    "retained_schools": 720,
+    "closed_schools": 1440
+  },
+  "independent_diagram_examples": {
+    "K": {
+      "age_5_9": 20,
+      "age_10_14": 40,
+      "estimated_children": 36
+    },
+    "joint": {
+      "initial": [
+        50,
+        50
+      ],
+      "illustrative_adjusted": [
+        20,
+        80
+      ],
+      "independent_of_G2": true
+    }
+  }
+}

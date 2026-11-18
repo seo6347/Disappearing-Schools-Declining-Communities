@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 610" role="img" aria-labelledby="method-s3-title"><title id="method-s3-title">통합학교안의 수용력과 도로경로 검증</title>
+<defs><marker id="method-s3-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M1 1 L8 5 L1 9" fill="none" stroke="#ef5941" stroke-width="1.5"/></marker></defs>
+<g font-family="sans-serif" fill="#282828" font-size="23">
+<g data-appear="3-1" data-until="3-2">
+<g text-anchor="middle"><text x="125" y="70">Case 1</text><text x="350" y="70">Case 2</text><text x="575" y="70">Case 3</text></g>
+<g fill="none" stroke="#ef5941" stroke-width="3" marker-end="url(#method-s3-arrow)"><path data-draw="3-1" d="M70 200 Q55 145 102 143"/><path data-draw="3-1" d="M180 200 Q190 145 148 143"/><path data-draw="3-1" d="M350 145 Q300 145 295 192"/><path data-draw="3-1" d="M405 220 L320 220"/><path data-draw="3-1" d="M575 145 Q620 145 627 192"/><path data-draw="3-1" d="M520 220 L602 220"/></g>
+<g fill="#f3f0e6" stroke="#282828" stroke-width="3"><circle cx="125" cy="130" r="25"/><circle cx="70" cy="220" r="25"/><circle cx="180" cy="220" r="25"/><circle cx="350" cy="130" r="25"/><circle cx="295" cy="220" r="25"/><circle cx="405" cy="220" r="25"/><circle cx="575" cy="130" r="25"/><circle cx="520" cy="220" r="25"/><circle cx="630" cy="220" r="25"/></g>
+<g text-anchor="middle" font-weight="700"><text x="125" y="139">A</text><text x="70" y="229">B</text><text x="180" y="229">C</text><text x="350" y="139">A</text><text x="295" y="229">B</text><text x="405" y="229">C</text><text x="575" y="139">A</text><text x="520" y="229">B</text><text x="630" y="229">C</text><text x="125" y="295">A초 통합학교안</text><text x="350" y="295">B초 통합학교안</text><text x="575" y="295">C초 통합학교안</text></g>
+<path d="M50 200 L90 240 M90 200 L50 240 M160 200 L200 240 M200 200 L160 240 M330 110 L370 150 M370 110 L330 150 M385 200 L425 240 M425 200 L385 240 M555 110 L595 150 M595 110 L555 150 M500 200 L540 240 M540 200 L500 240" fill="none" stroke="#ef5941" stroke-width="4"/>
+</g>
+<g data-appear="3-2" data-until="3-3">
+<text x="350" y="65" text-anchor="middle" font-weight="700">Case 1 · A초 통합학교안</text>
+<g fill="none" stroke="#ef5941" stroke-width="4" marker-end="url(#method-s3-arrow)"><path data-draw="3-2" d="M210 345 Q215 260 315 215"/><path data-draw="3-2" d="M490 345 Q485 260 385 215"/></g>
+<g fill="#f3f0e6" stroke="#282828" stroke-width="4"><circle cx="350" cy="190" r="42"/><circle cx="210" cy="390" r="42"/><circle cx="490" cy="390" r="42"/></g>
+<g text-anchor="middle" font-weight="700"><text x="350" y="202" font-size="36">A</text><text x="210" y="402" font-size="36">B</text><text x="490" y="402" font-size="36">C</text><g fill="#ef5941"><text x="350" y="267">100명</text><text x="210" y="466">20명</text><text x="490" y="466">30명</text></g></g>
+<g text-anchor="middle" font-size="20"><text x="350" y="303" font-weight="700">A초 수용력 140명</text><text x="350" y="329">일반교실 5개 × 28명</text></g>
+<path d="M425 104 H625 Q642 104 642 121 V164 Q642 181 625 181 H471 L416 208 L437 181 H425 Q408 181 408 164 V121 Q408 104 425 104 Z" fill="#eae7dc" stroke="#282828" stroke-width="2.5"/>
+<text x="525" y="151" text-anchor="middle" font-weight="700" fill="#bf402f">수용 못 해!</text>
+<path d="M218.75 250 L258.75 290 M258.75 250 L218.75 290 M441.25 250 L481.25 290 M481.25 250 L441.25 290" fill="none" stroke="#ef5941" stroke-width="5"/>
+</g>
+<g data-appear="3-3"><text x="55" y="55">Case 1)</text><text x="55" y="91">산악 지형인 경우</text><text x="390" y="55">Case 2)</text><text x="390" y="91">해상교통수단이</text><text x="390" y="127">포함된 경우</text>
+<path d="M120 330 L195 145 L270 330" fill="none" stroke="#50ca74" stroke-width="4"/><path d="M65 245 L292 210" fill="none" stroke="#ef5941" stroke-width="2" stroke-dasharray="7 9"/>
+<path data-draw="3-3" d="M65 245 C25 410 50 455 185 440 C315 430 350 315 292 210" fill="none" stroke="#ef5941" stroke-width="4"/>
+<path d="M472 166 C495 164 504 205 526 218 C545 207 553 181 570 196 C592 216 604 244 615 266 C642 290 654 329 662 370 C644 408 600 425 560 437 C534 414 522 380 516 344 C512 314 492 285 470 283 L451 270 C434 258 442 233 436 215 C424 194 448 176 472 166 Z" fill="none" stroke="#282828" stroke-width="3"/>
+<path d="M429 355 C394 351 380 373 383 399 C387 429 408 444 438 438 C471 432 486 407 479 383 C471 362 453 356 429 355 Z" fill="none" stroke="#282828" stroke-width="3"/>
+<path d="M438.08 353.64 L451 270" stroke="#87bde1" stroke-width="16" fill="none" stroke-linecap="butt"/>
+<path data-draw="3-3" d="M432 393 L451 270 C460 175 500 125 548 165 C568 185 577 219 591 270" fill="none" stroke="#ef5941" stroke-width="4"/>
+<path d="M452 381 L571 285" fill="none" stroke="#ef5941" stroke-width="2" stroke-dasharray="7 9"/>
+<g fill="#f3f0e6" stroke="#282828" stroke-width="3"><rect x="40" y="225" width="45" height="35"/><rect x="272" y="190" width="45" height="35"/><rect x="412" y="375" width="40" height="35"/><rect x="571" y="250" width="40" height="35"/></g><g font-weight="700"><text x="45" y="251">A</text><text x="278" y="216">B</text><text x="419" y="401">A</text><text x="578" y="276">B</text></g>
+<text x="120" y="250" fill="#ef5941">8km</text><text x="135" y="480" fill="#ef5941">도로 25km</text><text x="510" y="366" fill="#ef5941">6km</text><text x="525" y="161" fill="#ef5941">11km</text>
+<path d="M65 532 H112" stroke="#ef5941" stroke-width="2.5" stroke-dasharray="7 9"/><text x="133" y="540" font-size="20">직선거리</text><path d="M65 576 H112" stroke="#ef5941" stroke-width="3.5"/><text x="133" y="584" font-size="20">실제 이동거리</text></g>
+</g></svg>

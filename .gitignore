@@ -31,6 +31,4 @@ logs/
 
 # Interactive methodology scrollytelling
 !/method-scrollytelling/
-!/method-scrollytelling/**
 !/method-scrollytelling/data/
-!/method-scrollytelling/data/**
